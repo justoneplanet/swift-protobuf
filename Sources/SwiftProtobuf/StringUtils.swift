@@ -66,5 +66,5 @@ internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String? {
     if let s = s {
         return String._unconditionallyBridgeFromObjectiveC(s)
     }
-    return nil
+    return String()
 }
