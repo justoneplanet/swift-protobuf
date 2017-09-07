@@ -97,10 +97,8 @@ TEST_PROTOS= \
 	Protos/google/protobuf/unittest_empty.proto \
 	Protos/google/protobuf/unittest_import.proto \
 	Protos/google/protobuf/unittest_import_lite.proto \
-	Protos/google/protobuf/unittest_import_proto3.proto \
 	Protos/google/protobuf/unittest_import_public.proto \
 	Protos/google/protobuf/unittest_import_public_lite.proto \
-	Protos/google/protobuf/unittest_import_public_proto3.proto \
 	Protos/google/protobuf/unittest_lite.proto \
 	Protos/google/protobuf/unittest_lite_imports_nonlite.proto \
 	Protos/google/protobuf/unittest_mset.proto \
@@ -129,6 +127,7 @@ TEST_PROTOS= \
 	Protos/unittest_swift_naming.proto \
 	Protos/unittest_swift_naming_no_prefix.proto \
 	Protos/unittest_swift_oneof_all_required.proto \
+	Protos/unittest_swift_oneof_merging.proto \
 	Protos/unittest_swift_performance.proto \
 	Protos/unittest_swift_reserved.proto \
 	Protos/unittest_swift_reserved_ext.proto \
@@ -156,12 +155,18 @@ LIBRARY_PROTOS= \
 # Protos that are used internally by the plugin
 PLUGIN_PROTOS= \
 	Protos/google/protobuf/compiler/plugin.proto \
-	Protos/google/protobuf/descriptor.proto
+	Protos/google/protobuf/descriptor.proto \
+	Protos/PluginLibrary/swift_protobuf_module_mappings.proto
 
 # Protos that are used by the conformance test runner.
 CONFORMANCE_PROTOS= \
 	Protos/conformance/conformance.proto \
+	Protos/google/protobuf/test_messages_proto2.proto \
 	Protos/google/protobuf/test_messages_proto3.proto
+
+SWIFT_DESCRIPTOR_TEST_PROTOS= \
+	Protos/pluginlib_descriptor_test.proto \
+	${PLUGIN_PROTOS}
 
 XCODEBUILD_EXTRAS =
 # Invoke make with XCODE_SKIP_OPTIMIZER=1 to suppress the optimizer when
@@ -245,7 +250,7 @@ all: build
 # (Someday, 'swift test' will learn how to auto-discover test cases on Linux,
 # at which time this will no longer be needed.)
 build:
-	@${AWK} -f CollectTests.awk Tests/SwiftProtobufTests/Test_*.swift > Tests/LinuxMain.swift.new
+	@${AWK} -f DevTools/CollectTests.awk Tests/*/Test_*.swift > Tests/LinuxMain.swift.new
 	@if ! cmp -s Tests/LinuxMain.swift.new Tests/LinuxMain.swift; then \
 		cp Tests/LinuxMain.swift.new Tests/LinuxMain.swift; \
 		echo "FYI: Tests/LinuxMain.swift Updated"; \
@@ -253,13 +258,14 @@ build:
 	@rm Tests/LinuxMain.swift.new
 	${SWIFT} build
 
-# This will get run by any other rule that tries to use the plugin.  This hacks
-# in a check during the library build to ensure that the protoc on the local
-# system is one we expect. This was inspired by the findings that lead to
+# This will get run by any other rule that tries to use the plugin, to
+# ensure that the protoc on the local system is 3.1 or later.
+# For details, see
 #   https://github.com/apple/swift-protobuf/issues/111
-# We want 3.1 or later.
 ${PROTOC_GEN_SWIFT}: build
-	@if [[ ! "$(shell ${PROTOC} --version)" =~ libprotoc\ 3\.[1-9]\.[[:digit:]]+ ]]; then \
+	@if ${PROTOC} --version | grep 'libprotoc\ 3\.[1-9]\.' > /dev/null; then \
+	  true; \
+	else \
 	  echo "===================================================================================="; \
 	  echo "WARNING: Unexpected version of protoc: $(shell ${PROTOC} --version)"; \
 	  echo "WARNING: The JSON support in generated files may not be correct."; \
@@ -273,8 +279,11 @@ install: build
 	${INSTALL} ${PROTOC_GEN_SWIFT} ${BINDIR}
 
 clean:
-	swift build --clean
-	rm -rf .build _test ${PROTOC_GEN_SWIFT}
+	-swift build --clean
+	-swift package clean
+	rm -rf .build _test ${PROTOC_GEN_SWIFT} DescriptorTestData.bin \
+	  Performance/_generated Performance/_results Protos/mined_words.txt \
+	  docs build
 	find . -name '*~' | xargs rm -f
 
 # Build a local copy of the API documentation, using the same process used
@@ -327,8 +336,8 @@ test-runtime: build
 # one at a time instead.
 test-plugin: build ${PROTOC_GEN_SWIFT}
 	@rm -rf _test && mkdir _test
-	for p in `find Protos -type f -name '*.proto'`; do \
-		${GENERATE_SRCS} --tfiws_out=_test $$p; \
+	for p in `find Protos/ -type f -name '*.proto'`; do \
+		${GENERATE_SRCS} --tfiws_out=_test $$p || exit 1; \
 	done
 	diff -ru _test Reference
 
@@ -344,8 +353,8 @@ test-plugin: build ${PROTOC_GEN_SWIFT}
 # one at a time instead.
 reference: build ${PROTOC_GEN_SWIFT}
 	@rm -rf Reference && mkdir Reference
-	for p in `find Protos -type f -name '*.proto'`; do \
-		${GENERATE_SRCS} --tfiws_out=Reference $$p; \
+	for p in `find Protos/ -type f -name '*.proto'`; do \
+		${GENERATE_SRCS} --tfiws_out=Reference $$p || exit 1; \
 	done
 
 #
@@ -357,7 +366,12 @@ reference: build ${PROTOC_GEN_SWIFT}
 #  * protoc is built and installed
 #  * PROTOC at the top of this file is set correctly
 #
-regenerate: regenerate-library-protos regenerate-plugin-protos regenerate-test-protos regenerate-conformance-protos
+regenerate: \
+	regenerate-library-protos \
+	regenerate-plugin-protos \
+	regenerate-test-protos \
+	regenerate-conformance-protos \
+	Tests/PluginLibraryTests/DescriptorTestData.swift
 
 # Rebuild just the protos included in the runtime library
 regenerate-library-protos: build ${PROTOC_GEN_SWIFT}
@@ -380,12 +394,24 @@ regenerate-plugin-protos: build ${PROTOC_GEN_SWIFT}
 # can't be done in a single protoc/proto-gen-swift invoke and have to be done
 # one at a time instead.
 regenerate-test-protos: build ${PROTOC_GEN_SWIFT} Protos/generated_swift_names_enums.proto Protos/generated_swift_names_enum_cases.proto Protos/generated_swift_names_fields.proto Protos/generated_swift_names_messages.proto
-	for t in ${TEST_PROTOS}; do \
-		${GENERATE_SRCS} \
-			--tfiws_opt=FileNaming=DropPath \
-			--tfiws_out=Tests/SwiftProtobufTests \
-			$$t; \
-	done
+	${GENERATE_SRCS} \
+		--tfiws_opt=FileNaming=DropPath \
+		--tfiws_out=Tests/SwiftProtobufTests \
+		${TEST_PROTOS}
+
+Tests/PluginLibraryTests/DescriptorTestData.swift: build ${PROTOC_GEN_SWIFT} ${SWIFT_DESCRIPTOR_TEST_PROTOS}
+	@${PROTOC} \
+		--include_imports \
+		--descriptor_set_out=DescriptorTestData.bin \
+		-I Protos \
+		${SWIFT_DESCRIPTOR_TEST_PROTOS}
+	@rm -f $@
+	@echo '// See Makefile how this is generated.' >> $@
+	@echo 'import Foundation' >> $@
+	@echo 'let fileDesciptorSetBytes: [UInt8] = [' >> $@
+	@xxd -i < DescriptorTestData.bin >> $@
+	@echo ']' >> $@
+	@echo 'let fileDesciptorSetData = Data(bytes: fileDesciptorSetBytes)' >> $@
 
 #
 # Collect a list of words that appear in the SwiftProtobuf library
@@ -394,6 +420,7 @@ regenerate-test-protos: build ${PROTOC_GEN_SWIFT} Protos/generated_swift_names_e
 # The logic here builds a word list as follows:
 #  = Look at every Swift source file in the library
 #  = Take every line with the word 'public', 'func', or 'var'
+#  = Remove any comments from the line.
 #  = Break each such line into words (stripping all punctuation)
 #  = Remove words that differ only in case
 #
@@ -404,8 +431,9 @@ regenerate-test-protos: build ${PROTOC_GEN_SWIFT} Protos/generated_swift_names_e
 Protos/mined_words.txt: Sources/SwiftProtobuf/*
 	@echo Building $@
 	@cat Sources/SwiftProtobuf/* | \
-	grep ' \(public\|func\|var\) ' | \
-	grep -v ' \(private\|internal\) ' | \
+	grep -E '\b(public|func|var)\b' | \
+	grep -vE '\b(private|internal|fileprivate)\b' | \
+	sed -e 's|//.*$$||g' | \
 	sed -e 's/[^a-zA-Z0-9_]/ /g' | \
 	tr " " "\n" | \
 	sed -e 's/^_//' | \
@@ -500,20 +528,16 @@ update-proto-files: check-for-protobuf-checkout
 	@rm -rf Protos/google && mkdir -p Protos/google/protobuf/compiler
 	@cp -v "${GOOGLE_PROTOBUF_CHECKOUT}"/src/google/protobuf/*.proto Protos/google/protobuf/
 	@cp -v "${GOOGLE_PROTOBUF_CHECKOUT}"/src/google/protobuf/compiler/*.proto Protos/google/protobuf/compiler/
-	# It would be nice to get these added to google/protobuf instead of
-	# applying them locally.
-	@echo 'option swift_prefix = "Proto3";' >> Protos/google/protobuf/unittest_import_proto3.proto
-	@echo 'option swift_prefix = "Proto3";' >> Protos/google/protobuf/unittest_import_public_proto3.proto
-	@echo 'option swift_prefix = "Proto3";' >> Protos/google/protobuf/unittest_proto3.proto
-	@echo 'option swift_prefix = "Proto3";' >> Protos/google/protobuf/map_unittest_proto3.proto
+	# This file doesn't generate in google/protobuf, appears to be stale/unused.
+	@rm Protos/google/protobuf/map_unittest_proto3.proto
 
 # Runs the conformance tests.
-test-conformance: build check-for-protobuf-checkout $(CONFORMANCE_HOST) failure_list_swift.txt
+test-conformance: build check-for-protobuf-checkout $(CONFORMANCE_HOST) Sources/Conformance/failure_list_swift.txt
 	( \
 		ABS_PBDIR=`cd ${GOOGLE_PROTOBUF_CHECKOUT}; pwd`; \
 		$${ABS_PBDIR}/conformance/conformance-test-runner \
 		  --enforce_recommended \
-		  --failure_list failure_list_swift.txt \
+		  --failure_list Sources/Conformance/failure_list_swift.txt \
 		  $(SWIFT_CONFORMANCE_PLUGIN); \
 	)
 

@@ -33,4 +33,12 @@ public enum BinaryDecodingError: Error {
   /// `partial: true` during decoding if you wish to explicitly ignore missing
   /// required fields.
   case missingRequiredFields
+
+  /// An internal error happened while decoding.  If this is ever encountered,
+  /// please file an issue with SwiftProtobuf with as much details as possible
+  /// for what happened (proto definitions, bytes being decoded (if possible)).
+  case internalExtensionError
+
+  /// Reached the nesting limit for messages within messages while decoding.
+  case messageDepthLimit
 }

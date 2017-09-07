@@ -32,6 +32,8 @@ private let asciiComma = UInt8(ascii: ",")
 private let asciiDoubleQuote = UInt8(ascii: "\"")
 private let asciiBackslash = UInt8(ascii: "\\")
 private let asciiForwardSlash = UInt8(ascii: "/")
+private let asciiOpenSquareBracket = UInt8(ascii: "[")
+private let asciiCloseSquareBracket = UInt8(ascii: "]")
 private let asciiOpenCurlyBracket = UInt8(ascii: "{")
 private let asciiCloseCurlyBracket = UInt8(ascii: "}")
 private let asciiUpperA = UInt8(ascii: "A")
@@ -84,12 +86,14 @@ internal struct JSONEncoder {
         data.append(contentsOf: buff)
     }
 
-    /// Append a `_NameMap.Name` to the JSON text.  As with
-    /// StaticString above, a `_NameMap.Name` provides pre-converted
+    /// Append a `_NameMap.Name` to the JSON text surrounded by quotes.
+    /// As with StaticString above, a `_NameMap.Name` provides pre-converted
     /// UTF8 bytes, so this is much faster than appending a regular
     /// `String`.
-    internal mutating func append(name: _NameMap.Name) {
+    internal mutating func appendQuoted(name: _NameMap.Name) {
+        data.append(asciiDoubleQuote)
         data.append(contentsOf: name.utf8Buffer)
+        data.append(asciiDoubleQuote)
     }
 
     /// Append a `String` to the JSON text.
@@ -107,10 +111,8 @@ internal struct JSONEncoder {
         if let s = separator {
             data.append(s)
         }
-        data.append(asciiDoubleQuote)
-        // Append the StaticString's utf8 contents directly
-        append(name: name)
-        append(staticText: "\":")
+        appendQuoted(name: name)
+        data.append(asciiColon)
         separator = asciiComma
     }
 
@@ -127,8 +129,28 @@ internal struct JSONEncoder {
         separator = asciiComma
     }
 
+    /// Append an open square bracket `[` to the JSON.
+    internal mutating func startArray() {
+        data.append(asciiOpenSquareBracket)
+        separator = nil
+    }
+
+    /// Append a close square bracket `]` to the JSON.
+    internal mutating func endArray() {
+        data.append(asciiCloseSquareBracket)
+        separator = asciiComma
+    }
+
+    /// Append a comma `,` to the JSON.
+    internal mutating func comma() {
+        data.append(asciiComma)
+    }
+
     /// Append an open curly brace `{` to the JSON.
     internal mutating func startObject() {
+        if let s = separator {
+            data.append(s)
+        }
         data.append(asciiOpenCurlyBracket)
         separator = nil
     }
@@ -289,19 +311,19 @@ internal struct JSONEncoder {
                 data.append(hexDigits[Int(c.value / 16)])
                 data.append(hexDigits[Int(c.value & 15)])
             case 23...126:
-                data.append(UInt8(truncatingBitPattern: c.value))
+                data.append(UInt8(extendingOrTruncating: c.value))
             case 0x80...0x7ff:
-                data.append(0xc0 + UInt8(truncatingBitPattern: c.value >> 6))
-                data.append(0x80 + UInt8(truncatingBitPattern: c.value & 0x3f))
+                data.append(0xc0 + UInt8(extendingOrTruncating: c.value >> 6))
+                data.append(0x80 + UInt8(extendingOrTruncating: c.value & 0x3f))
             case 0x800...0xffff:
-                data.append(0xe0 + UInt8(truncatingBitPattern: c.value >> 12))
-                data.append(0x80 + UInt8(truncatingBitPattern: (c.value >> 6) & 0x3f))
-                data.append(0x80 + UInt8(truncatingBitPattern: c.value & 0x3f))
+                data.append(0xe0 + UInt8(extendingOrTruncating: c.value >> 12))
+                data.append(0x80 + UInt8(extendingOrTruncating: (c.value >> 6) & 0x3f))
+                data.append(0x80 + UInt8(extendingOrTruncating: c.value & 0x3f))
             default:
-                data.append(0xf0 + UInt8(truncatingBitPattern: c.value >> 18))
-                data.append(0x80 + UInt8(truncatingBitPattern: (c.value >> 12) & 0x3f))
-                data.append(0x80 + UInt8(truncatingBitPattern: (c.value >> 6) & 0x3f))
-                data.append(0x80 + UInt8(truncatingBitPattern: c.value & 0x3f))
+                data.append(0xf0 + UInt8(extendingOrTruncating: c.value >> 18))
+                data.append(0x80 + UInt8(extendingOrTruncating: (c.value >> 12) & 0x3f))
+                data.append(0x80 + UInt8(extendingOrTruncating: (c.value >> 6) & 0x3f))
+                data.append(0x80 + UInt8(extendingOrTruncating: c.value & 0x3f))
             }
         }
         data.append(asciiDoubleQuote)
@@ -311,36 +333,42 @@ internal struct JSONEncoder {
     internal mutating func putBytesValue(value: Data) {
         data.append(asciiDoubleQuote)
         if value.count > 0 {
-            var t: Int = 0
-            for (i,v) in value.enumerated() {
-                if i > 0 && i % 3 == 0 {
+            value.withUnsafeBytes { (p: UnsafePointer<UInt8>) in
+                var t: Int = 0
+                var bytesInGroup: Int = 0
+                for i in 0..<value.count {
+                    if bytesInGroup == 3 {
+                        data.append(base64Digits[(t >> 18) & 63])
+                        data.append(base64Digits[(t >> 12) & 63])
+                        data.append(base64Digits[(t >> 6) & 63])
+                        data.append(base64Digits[t & 63])
+                        t = 0
+                        bytesInGroup = 0
+                    }
+                    t = (t << 8) + Int(p[i])
+                    bytesInGroup += 1
+                }
+                switch bytesInGroup {
+                case 3:
                     data.append(base64Digits[(t >> 18) & 63])
                     data.append(base64Digits[(t >> 12) & 63])
                     data.append(base64Digits[(t >> 6) & 63])
                     data.append(base64Digits[t & 63])
-                    t = 0
+                case 2:
+                    t <<= 8
+                    data.append(base64Digits[(t >> 18) & 63])
+                    data.append(base64Digits[(t >> 12) & 63])
+                    data.append(base64Digits[(t >> 6) & 63])
+                    data.append(asciiEquals)
+                case 1:
+                    t <<= 16
+                    data.append(base64Digits[(t >> 18) & 63])
+                    data.append(base64Digits[(t >> 12) & 63])
+                    data.append(asciiEquals)
+                    data.append(asciiEquals)
+                default:
+                    break
                 }
-                t <<= 8
-                t += Int(v)
-            }
-            switch value.count % 3 {
-            case 0:
-                data.append(base64Digits[(t >> 18) & 63])
-                data.append(base64Digits[(t >> 12) & 63])
-                data.append(base64Digits[(t >> 6) & 63])
-                data.append(base64Digits[t & 63])
-            case 1:
-                t <<= 16
-                data.append(base64Digits[(t >> 18) & 63])
-                data.append(base64Digits[(t >> 12) & 63])
-                data.append(asciiEquals)
-                data.append(asciiEquals)
-            default:
-                t <<= 8
-                data.append(base64Digits[(t >> 18) & 63])
-                data.append(base64Digits[(t >> 12) & 63])
-                data.append(base64Digits[(t >> 6) & 63])
-                data.append(asciiEquals)
             }
         }
         data.append(asciiDoubleQuote)

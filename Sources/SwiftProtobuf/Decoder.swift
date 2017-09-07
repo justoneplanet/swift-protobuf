@@ -121,10 +121,30 @@ public protocol Decoder {
   // This is broken into separate methods depending on whether the value
   // type is primitive (_ProtobufMap), enum (_ProtobufEnumMap), or message
   // (_ProtobufMessageMap)
-  mutating func decodeMapField<KeyType: MapKeyType, ValueType: MapValueType>(fieldType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws
-  mutating func decodeMapField<KeyType: MapKeyType, ValueType: Enum>(fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int
-  mutating func decodeMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws
+  mutating func decodeMapField<KeyType, ValueType: MapValueType>(fieldType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws
+  mutating func decodeMapField<KeyType, ValueType>(fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int
+  mutating func decodeMapField<KeyType, ValueType>(fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws
 
   // Decode extension fields
   mutating func decodeExtensionField(values: inout ExtensionFieldValueSet, messageType: Message.Type, fieldNumber: Int) throws
+
+  // Run a decode loop decoding the MessageSet format for Extensions.
+  mutating func decodeExtensionFieldsAsMessageSet(values: inout ExtensionFieldValueSet,
+                                                  messageType: Message.Type) throws
+}
+
+/// Most Decoders won't care about Extension handing as in MessageSet
+/// format, so provide a default implementation simply looping on the
+/// fieldNumbers and feeding through to extension decoding.
+extension Decoder {
+  public mutating func decodeExtensionFieldsAsMessageSet(
+    values: inout ExtensionFieldValueSet,
+    messageType: Message.Type
+  ) throws {
+    while let fieldNumber = try self.nextFieldNumber() {
+      try self.decodeExtensionField(values: &values,
+                                    messageType: messageType,
+                                    fieldNumber: fieldNumber)
+    }
+  }
 }

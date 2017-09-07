@@ -32,8 +32,6 @@ internal func typeName(fromMessage message: Message) -> String {
   return messageType.protoMessageName
 }
 
-internal let defaultTypePrefix: String = "type.googleapis.com"
-
 internal func typeName(fromURL s: String) -> String {
   var typeStart = s.startIndex
   var i = typeStart
@@ -45,10 +43,10 @@ internal func typeName(fromURL s: String) -> String {
     }
   }
 
-  return s[typeStart..<s.endIndex]
+  return String(s[typeStart..<s.endIndex])
 }
 
-fileprivate var serialQueue = DispatchQueue(label: "com.apple.swift.typeRegistry")
+fileprivate var serialQueue = DispatchQueue(label: "org.swift.protobuf.typeRegistry")
 
 // All access to this should be done on `serialQueue`.
 fileprivate var knownTypes: [String:Message.Type] = [

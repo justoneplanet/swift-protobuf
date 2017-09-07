@@ -34,16 +34,13 @@ public extension Message {
     let requiredSize = try serializedDataSize()
     var data = Data(count: requiredSize)
     try data.withUnsafeMutableBytes { (pointer: UnsafeMutablePointer<UInt8>) in
-      try serializeBinary(into: pointer)
+      var visitor = BinaryEncodingVisitor(forWritingInto: pointer)
+      try traverse(visitor: &visitor)
+      // Currently not exposing this from the api because it really would be
+      // an internal error in the library and should never happen.
+      assert(requiredSize == visitor.encoder.distance(pointer: pointer))
     }
     return data
-  }
-
-  private func serializeBinary(
-    into pointer: UnsafeMutablePointer<UInt8>
-  ) throws {
-    var visitor = BinaryEncodingVisitor(forWritingInto: pointer)
-    try traverse(visitor: &visitor)
   }
 
   /// Returns the size in bytes required to encode the message in binary format.
@@ -70,14 +67,16 @@ public extension Message {
   ///     `Message.isInitialized` before encoding to verify that all required
   ///     fields are present. If any are missing, this method throws
   ///     `BinaryEncodingError.missingRequiredFields`.
+  ///   - options: The BinaryDecodingOptions to use.
   /// - Throws: `BinaryDecodingError` if decoding fails.
   init(
     serializedData data: Data,
     extensions: ExtensionMap? = nil,
-    partial: Bool = false
+    partial: Bool = false,
+    options: BinaryDecodingOptions = BinaryDecodingOptions()
   ) throws {
     self.init()
-    try merge(serializedData: data, extensions: extensions, partial: partial)
+    try merge(serializedData: data, extensions: extensions, partial: partial, options: options)
   }
 
   /// Updates the message by decoding the given `Data` value containing a
@@ -96,37 +95,25 @@ public extension Message {
   ///     `Message.isInitialized` before encoding to verify that all required
   ///     fields are present. If any are missing, this method throws
   ///     `BinaryEncodingError.missingRequiredFields`.
+  ///   - options: The BinaryDecodingOptions to use.
   /// - Throws: `BinaryDecodingError` if decoding fails.
   mutating func merge(
     serializedData data: Data,
     extensions: ExtensionMap? = nil,
-    partial: Bool = false
+    partial: Bool = false,
+    options: BinaryDecodingOptions = BinaryDecodingOptions()
   ) throws {
     if !data.isEmpty {
       try data.withUnsafeBytes { (pointer: UnsafePointer<UInt8>) in
-        try _protobuf_mergeSerializedBytes(from: pointer,
-                                           count: data.count,
-                                           extensions: extensions)
+        var decoder = BinaryDecoder(forReadingFrom: pointer,
+                                    count: data.count,
+                                    options: options,
+                                    extensions: extensions)
+        try decoder.decodeFullMessage(message: &self)
       }
     }
     if !partial && !isInitialized {
       throw BinaryDecodingError.missingRequiredFields
-    }
-  }
-
-  /// SwiftProtobuf Internal: Common support for decoding.
-  internal mutating func _protobuf_mergeSerializedBytes(
-    from bytes: UnsafePointer<UInt8>,
-    count: Int,
-    extensions: ExtensionMap?
-  ) throws {
-    var decoder = BinaryDecoder(forReadingFrom: bytes, count: count, extensions: extensions)
-    try decodeMessage(decoder: &decoder)
-    guard decoder.complete else {
-      throw BinaryDecodingError.trailingGarbage
-    }
-    if let unknownData = decoder.unknownData {
-      unknownFields.append(protobufData: unknownData)
     }
   }
 }

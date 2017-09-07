@@ -15,35 +15,27 @@
 ///
 // -----------------------------------------------------------------------------
 
-/// Note that the MessageExtensionBase protocol has no generic
-/// pieces.
-public protocol MessageExtensionBase {
+/// Type-erased MessageExtension field implementation.
+public protocol AnyMessageExtension {
     var fieldNumber: Int { get }
     var fieldName: String { get }
     var messageType: Message.Type { get }
-    func _protobuf_newField() -> AnyExtensionField
+    func _protobuf_newField<D: Decoder>(decoder: inout D) throws -> AnyExtensionField?
 }
 
 /// A "Message Extension" relates a particular extension field to
 /// a particular message.  The generic constraints allow
 /// compile-time compatibility checks.
-public class MessageExtension<FieldType: ExtensionField, MessageType: Message>: MessageExtensionBase {
+public class MessageExtension<FieldType: ExtensionField, MessageType: Message>: AnyMessageExtension {
     public let fieldNumber: Int
     public let fieldName: String
     public let messageType: Message.Type
-    public let defaultValue: FieldType.ValueType
-    public init(_protobuf_fieldNumber: Int, fieldName: String, defaultValue: FieldType.ValueType) {
+    public init(_protobuf_fieldNumber: Int, fieldName: String) {
         self.fieldNumber = _protobuf_fieldNumber
         self.fieldName = fieldName
         self.messageType = MessageType.self
-        self.defaultValue = defaultValue
     }
-    public func _protobuf_set(value: FieldType.ValueType) -> AnyExtensionField {
-        var f = FieldType(protobufExtension: self)
-        f.value = value
-        return f
-    }
-    public func _protobuf_newField() -> AnyExtensionField {
-        return FieldType(protobufExtension: self)
+    public func _protobuf_newField<D: Decoder>(decoder: inout D) throws -> AnyExtensionField? {
+        return try FieldType(protobufExtension: self, decoder: &decoder)
     }
 }

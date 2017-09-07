@@ -34,7 +34,7 @@ internal struct HashVisitor: Visitor {
     hashValue = (hashValue ^ hash) &* i_16777619
   }
 
-  private mutating func mixMap<K: Hashable, V: Hashable>(map: Dictionary<K,V>) {
+  private mutating func mixMap<K, V: Hashable>(map: Dictionary<K,V>) {
     var mapHash = 0
     for (k, v) in map {
       // Note: This calculation cannot depend on the order of the items.
@@ -47,9 +47,7 @@ internal struct HashVisitor: Visitor {
   init() {}
 
   mutating func visitUnknown(bytes: Data) throws {
-    if bytes.count > 0 { // Workaround for Linux Foundation bug
-      mix(bytes.hashValue)
-    }
+    mix(bytes.hashValue)
   }
 
   mutating func visitSingularDoubleField(value: Double, fieldNumber: Int) throws {
@@ -79,7 +77,17 @@ internal struct HashVisitor: Visitor {
 
   mutating func visitSingularBytesField(value: Data, fieldNumber: Int) throws {
     mix(fieldNumber)
+#if swift(>=3.1)
     mix(value.hashValue)
+#else
+    // Workaround for https://bugs.swift.org/browse/SR-936
+    // (Fortunately, seems to have been fixed in Swift 3.1)
+    value.enumerateBytes { (block, index, stop) in
+        for b in block {
+            mix(Int(b))
+        }
+    }
+#endif
   }
 
   mutating func visitSingularEnumField<E: Enum>(value: E,
@@ -93,37 +101,32 @@ internal struct HashVisitor: Visitor {
     mix(value.hashValue)
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: MapValueType>(
+  mutating func visitMapField<KeyType, ValueType: MapValueType>(
     fieldType: _ProtobufMap<KeyType, ValueType>.Type,
     value: _ProtobufMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) where KeyType.BaseType: Hashable {
+  ) throws {
     mix(fieldNumber)
     mixMap(map: value)
   }
 
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Enum>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
     value: _ProtobufEnumMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) where KeyType.BaseType: Hashable, ValueType.RawValue == Int {
+  ) throws where ValueType.RawValue == Int {
     mix(fieldNumber)
     mixMap(map: value)
   }
 
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
     value: _ProtobufMessageMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) where KeyType.BaseType: Hashable {
+  ) throws {
     mix(fieldNumber)
     mixMap(map: value)
-  }
-
-  /// Called for each extension range.
-  mutating func visitExtensionFields(fields: ExtensionFieldValueSet, start: Int, end: Int) throws {
-    try fields.traverse(visitor: &self, start: start, end: end)
   }
 }

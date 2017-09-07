@@ -20,25 +20,11 @@ import SwiftProtobuf
 /// Generates the `_StorageClass` used for messages that employ copy-on-write
 /// logic for some of their fields.
 class MessageStorageClassGenerator {
-  private let fields: [MessageFieldGenerator]
-  private let oneofs: [OneofGenerator]
-  private let descriptor: Google_Protobuf_DescriptorProto
-  private let messageSwiftName: String
-  private let context: Context
+  private let fields: [FieldGenerator]
 
   /// Creates a new `MessageStorageClassGenerator`.
-  init(descriptor: Google_Protobuf_DescriptorProto,
-       fields: [MessageFieldGenerator],
-       oneofs: [OneofGenerator],
-       file: FileGenerator,
-       messageSwiftName: String,
-       context: Context
-  ) {
-    self.descriptor = descriptor
+  init(fields: [FieldGenerator]) {
     self.fields = fields
-    self.oneofs = oneofs
-    self.messageSwiftName = messageSwiftName
-    self.context = context
   }
 
   /// Visibility of the storage within the Message.
@@ -58,15 +44,34 @@ class MessageStorageClassGenerator {
 
     generateStoredProperties(printer: &p)
 
-    // Generate the default initializer. If we don't, Swift may generate one
-    // for some of the stored properties, which we will never use (so it just
-    // wastes space in the final binary).
-    p.print("\n")
-    p.print("init() {}\n")
-
-    p.print("\n")
+    // Generate a default instance to be used so the heap allocation is
+    // delayed until mutation is needed. This is the largest savings when
+    // the message is used as a field in another message as it causes
+    // returning the default to not require that heap allocation, i.e. -
+    // readonly usage never causes the allocation.
+    p.print(
+        "\n",
+        "static let defaultInstance = _StorageClass()\n",
+        "\n",
+        "private init() {}\n",
+        "\n")
     generateClone(printer: &p)
 
+    p.outdent()
+    p.print("}\n")
+  }
+
+  /// Generated the uniqueStorage() implementation.
+  func generateUniqueStroage(printer p: inout CodePrinter) {
+    p.print("\(storageVisibility) mutating func _uniqueStorage() -> _StorageClass {\n")
+    p.indent()
+    p.print("if !isKnownUniquelyReferenced(&_storage) {\n")
+    p.indent()
+    p.print("_storage = _StorageClass(copying: _storage)\n")
+    p.outdent()
+    p.print(
+      "}\n",
+      "return _storage\n")
     p.outdent()
     p.print("}\n")
   }
@@ -79,18 +84,8 @@ class MessageStorageClassGenerator {
   ///
   /// - Parameter p: The code printer.
   private func generateStoredProperties(printer p: inout CodePrinter) {
-    var oneofsHandled = Set<Int32>()
     for f in fields {
-      if f.descriptor.hasOneofIndex {
-        let oneofIndex = f.descriptor.oneofIndex
-        if !oneofsHandled.contains(oneofIndex) {
-          let oneof = f.oneof!
-          p.print("var \(oneof.swiftStorageFieldName): \(messageSwiftName).\(oneof.swiftRelativeType)?\n")
-          oneofsHandled.insert(oneofIndex)
-        }
-      } else {
-        p.print("var \(f.swiftStorageName): \(f.swiftStorageType) = \(f.swiftStorageDefaultValue)\n")
-      }
+      f.generateStorage(printer: &p)
     }
   }
 
@@ -100,17 +95,8 @@ class MessageStorageClassGenerator {
   private func generateClone(printer p: inout CodePrinter) {
     p.print("init(copying source: _StorageClass) {\n")
     p.indent()
-
-    var oneofsHandled = Set<Int32>()
     for f in fields {
-      if let o = f.oneof {
-        if !oneofsHandled.contains(f.descriptor.oneofIndex) {
-          p.print("\(o.swiftStorageFieldName) = source.\(o.swiftStorageFieldName)\n")
-          oneofsHandled.insert(f.descriptor.oneofIndex)
-        }
-      } else {
-        p.print("\(f.swiftStorageName) = source.\(f.swiftStorageName)\n")
-      }
+      f.generateStorageClassClone(printer: &p)
     }
     p.outdent()
     p.print("}\n")
@@ -119,7 +105,6 @@ class MessageStorageClassGenerator {
 
 /// Custom generator for storage of an google.protobuf.Any.
 class AnyMessageStorageClassGenerator : MessageStorageClassGenerator {
-
   override var storageVisibility: String { return "internal" }
   override var storageProvidesEqualTo: Bool { return true }
 

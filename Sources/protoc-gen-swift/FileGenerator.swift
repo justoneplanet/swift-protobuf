@@ -18,194 +18,15 @@ import Foundation
 import PluginLibrary
 import SwiftProtobuf
 
-///
-/// Extend the FileDescriptorProto with some utility
-/// methods for translating/reading/converting various
-/// properties.
-///
-extension Google_Protobuf_FileDescriptorProto {
-    func getMessageForPath(path: String) -> Google_Protobuf_DescriptorProto? {
-        let base: String
-        if !package.isEmpty {
-            base = "." + package
-        } else {
-            base = ""
-        }
-        for m in messageType {
-            let messagePath = base + "." + m.name
-            if messagePath == path {
-                return m
-            }
-            if let n = m.getMessageForPath(path: path, parentPath: messagePath) {
-                return n
-            }
-        }
-        return nil
-    }
-
-    func getMessageNameForPath(path: String) -> String? {
-        let base: String
-        if !package.isEmpty {
-            base = "." + package
-        } else {
-            base = ""
-        }
-        for m in messageType {
-            let messagePath = base + "." + m.name
-            let messageSwiftPath = sanitizeMessageTypeName(swiftPrefix + m.name)
-            if messagePath == path {
-                return messageSwiftPath
-            }
-            if let n = m.getMessageNameForPath(path: path, parentPath: messagePath, swiftPrefix: messageSwiftPath) {
-                return n
-            }
-        }
-        return nil
-    }
-
-    func getEnumNameForPath(path: String) -> String? {
-        let base: String
-        if !package.isEmpty {
-            base = "." + package
-        } else {
-            base = ""
-        }
-        for e in enumType {
-            let enumPath = base + "." + e.name
-            if enumPath == path {
-                return sanitizeEnumTypeName(swiftPrefix + e.name)
-            }
-        }
-        for m in messageType {
-            let messagePath = base + "." + m.name
-            let messageSwiftPath = sanitizeMessageTypeName(swiftPrefix + m.name)
-            if let n = m.getEnumNameForPath(path: path, parentPath: messagePath, swiftPrefix: messageSwiftPath) {
-                return n
-            }
-        }
-        return nil
-    }
-
-    func getSwiftNameForEnumCase(path: String, caseName: String) -> String? {
-        let base: String
-        if !package.isEmpty {
-            base = "." + package
-        } else {
-            base = ""
-        }
-        for e in enumType {
-            let enumPath = base + "." + e.name
-            if enumPath == path {
-                let enumSwiftName = swiftPrefix + sanitizeEnumTypeName(e.name)
-                return enumSwiftName + "." + e.getSwiftNameForEnumCase(caseName: caseName)
-            }
-        }
-        for m in messageType {
-            let messagePath = base + "." + m.name
-            let messageSwiftPath = sanitizeMessageTypeName(swiftPrefix + m.name)
-            if let n = m.getSwiftNameForEnumCase(path: path, caseName: caseName, parentPath: messagePath, swiftPrefix: messageSwiftPath) {
-                return n
-            }
-        }
-        return nil
-    }
-
-    var isProto3: Bool {return syntax == "proto3"}
-
-    var protoPath: String {
-        if !package.isEmpty {
-            return "." + package
-        } else {
-            return ""
-        }
-    }
-
-    var baseFilename: String {
-        return splitPath(pathname: name).base
-    }
-
-    var isWellKnownType : Bool {
-      // descriptor.proto is also in the "google.protobuf" package, but it isn't
-      // a well known type, so filter it out.
-      return package == "google.protobuf" && baseFilename != "descriptor"
-    }
-
-    var swiftPrefix: String {
-        if options.hasSwiftPrefix {
-            return options.swiftPrefix
-        }
-        if !package.isEmpty {
-            var makeUpper = true
-            var prefix = ""
-            for c in package.characters {
-                if c == "_" {
-                    makeUpper = true
-                } else if c == "." {
-                    makeUpper = true
-                    prefix += "_"
-                } else if makeUpper {
-                    prefix += String(c).uppercased()
-                    makeUpper = false
-                } else {
-                    prefix += String(c)
-                }
-            }
-            return prefix + "_"
-        } else {
-            return ""
-        }
-    }
-
-    func locationFor(path: [Int32]) -> Google_Protobuf_SourceCodeInfo.Location? {
-        if hasSourceCodeInfo {
-            for l in sourceCodeInfo.location {
-                if l.path == path {
-                    return l
-                }
-            }
-        }
-        return nil
-    }
-}
 
 class FileGenerator {
-    let descriptor: Google_Protobuf_FileDescriptorProto
-    let generatorOptions: GeneratorOptions
-
-    init(descriptor: Google_Protobuf_FileDescriptorProto,
-         generatorOptions: GeneratorOptions) {
-        self.descriptor = descriptor
-        self.generatorOptions = generatorOptions
-    }
-
-    func messageNameForPath(path: String) -> String? {
-        let base: String
-        if !descriptor.package.isEmpty {
-            base = "." + descriptor.package
-        } else {
-            base = ""
-        }
-        for m in descriptor.messageType {
-            let messagePath = base + "." + m.name
-            if messagePath == path {
-                let swiftName = swiftPrefix + m.name
-                return swiftName
-            }
-        }
-        Stderr.print("Unable to match \(path) within \(base)")
-        assert(false)
-        return nil
-    }
-
-    var protoPackageName: String {return descriptor.package}
-    var swiftPrefix: String {return descriptor.swiftPrefix}
-    var isProto3: Bool {return descriptor.isProto3}
-    var isWellKnownType: Bool {return descriptor.isWellKnownType}
-    var baseFilename: String {return descriptor.baseFilename}
+    private let fileDescriptor: FileDescriptor
+    private let generatorOptions: GeneratorOptions
+    private let namer: SwiftProtobufNamer
 
     var outputFilename: String {
         let ext = ".pb.swift"
-        let pathParts = splitPath(pathname: descriptor.name)
+        let pathParts = splitPath(pathname: fileDescriptor.name)
         switch generatorOptions.outputNaming {
         case .FullPath:
             return pathParts.dir + pathParts.base + ext
@@ -218,65 +39,25 @@ class FileGenerator {
         }
     }
 
-    func commentsFor(path: [Int32], includeLeadingDetached: Bool = false) -> String {
-        func escapeMarkup(_ text: String) -> String {
-            // Proto file comments don't really have any markup associated with
-            // them.  Swift uses something like MarkDown:
-            //   "Markup Formatting Reference"
-            //   https://developer.apple.com/library/content/documentation/Xcode/Reference/xcode_markup_formatting_ref/index.html
-            // Sadly that format doesn't really lend itself to any form of
-            // escaping to ensure comments are interpreted markup when they
-            // really aren't. About the only thing that could be done is to
-            // try and escape some set of things that could start directives,
-            // and that gets pretty chatty/ugly pretty quickly.
-            return text
-        }
-
-        func prefixLines(text: String, prefix: String) -> String {
-            var result = ""
-            var lines = text.components(separatedBy: .newlines)
-            // Trim any blank lines off the end.
-            while !lines.isEmpty && trimWhitespace(lines.last!).isEmpty {
-                lines.removeLast()
-            }
-            for line in lines {
-                result.append(prefix + line + "\n")
-            }
-            return result
-        }
-
-        if let location = descriptor.locationFor(path: path) {
-            var result = ""
-
-            if includeLeadingDetached {
-                for detached in location.leadingDetachedComments {
-                    let comment = prefixLines(text: detached, prefix: "//")
-                    if !comment.isEmpty {
-                        result += comment
-                        // Detached comments have blank lines between then (and
-                        // anything that follows them).
-                        result += "\n"
-                    }
-                }
-            }
-
-            let comments = location.hasLeadingComments ? location.leadingComments : location.trailingComments
-            result += prefixLines(text: escapeMarkup(comments), prefix: "///")
-            return result
-        }
-        return ""
+    init(fileDescriptor: FileDescriptor,
+         generatorOptions: GeneratorOptions) {
+        self.fileDescriptor = fileDescriptor
+        self.generatorOptions = generatorOptions
+        namer = SwiftProtobufNamer(currentFile: fileDescriptor,
+                                   protoFileToModuleMappings: generatorOptions.protoToModuleMappings)
     }
 
-    func generateOutputFile(printer p: inout CodePrinter, context: Context) {
-        let inputFilename = descriptor.hasName ? descriptor.name : "<No name>"
+    /// Generate, if `errorString` gets filled in, then report error instead of using
+    /// what written into `printer`.
+    func generateOutputFile(printer p: inout CodePrinter, errorString: inout String?) {
         p.print(
-            "/*\n",
-            " * DO NOT EDIT.\n",
-            " *\n",
-            " * Generated by the protocol buffer compiler.\n",
-            " * Source: \(inputFilename)\n",
-            " *\n",
-            " */\n",
+            "// DO NOT EDIT.\n",
+            "//\n",
+            "// Generated by the Swift generator plugin for the protocol buffer compiler.\n",
+            "// Source: \(fileDescriptor.name)\n",
+            "//\n",
+            "// For information on using the generated types, please see the documenation:\n",
+            "//   https://github.com/apple/swift-protobuf/\n",
             "\n")
 
         // Attempt to bring over the comments at the top of the .proto file as
@@ -286,50 +67,52 @@ class FileGenerator {
         // the file is an empty path. That never seems to have comments on it.
         // https://github.com/google/protobuf/issues/2249 opened to figure out
         // the right way to do this since the syntax entry is optional.
-        let comments = commentsFor(path: [Google_Protobuf_FileDescriptorProto.FieldNumbers.syntax],
-                                   includeLeadingDetached: true)
-        if !comments.isEmpty {
-            p.print(comments)
-            // If the was a leading or tailing comment it won't have a blank
-            // line, after it, so ensure there is one.
-            if !comments.hasSuffix("\n\n") {
-                p.print("\n")
-            }
+        let syntaxPath = [Google_Protobuf_FileDescriptorProto.FieldNumbers.syntax]
+        if let syntaxLocation = fileDescriptor.sourceCodeInfoLocation(path: syntaxPath) {
+          let comments = syntaxLocation.asSourceComment(commentPrefix: "///",
+                                                        leadingDetachedPrefix: "//")
+          if !comments.isEmpty {
+              p.print(comments)
+              // If the was a leading or tailing comment it won't have a blank
+              // line, after it, so ensure there is one.
+              if !comments.hasSuffix("\n\n") {
+                  p.print("\n")
+              }
+          }
         }
 
         p.print("import Foundation\n")
-        if !isWellKnownType {
-          // The well known types ship with the runtime, everything else needs
-          // to import the runtime.
-          p.print("import SwiftProtobuf\n")
+        if !fileDescriptor.isBundledProto {
+            // The well known types ship with the runtime, everything else needs
+            // to import the runtime.
+            p.print("import SwiftProtobuf\n")
+        }
+        if let neededImports = generatorOptions.protoToModuleMappings.neededModules(forFile: fileDescriptor) {
+            p.print("\n")
+            for i in neededImports {
+                p.print("import \(i)\n")
+            }
         }
 
         p.print("\n")
         generateVersionCheck(printer: &p)
 
-        var enums = [EnumGenerator]()
-        let path = [Int32]()
-        var i: Int32 = 0
-        for e in descriptor.enumType {
-            let enumPath = path + [5, i]
-            i += 1
-            enums.append(EnumGenerator(descriptor: e, path: enumPath, parentSwiftName: nil, file: self))
+        let extensionSet =
+            ExtensionSetGenerator(fileDescriptor: fileDescriptor,
+                                  generatorOptions: generatorOptions,
+                                  namer: namer)
+
+        extensionSet.add(extensionFields: fileDescriptor.extensions)
+
+        let enums = fileDescriptor.enums.map {
+            return EnumGenerator(descriptor: $0, generatorOptions: generatorOptions, namer: namer)
         }
 
-        var messages = [MessageGenerator]()
-        i = 0
-        for m in descriptor.messageType {
-            let messagePath = path + [4, i]
-            i += 1
-            messages.append(MessageGenerator(descriptor: m, path: messagePath, parentSwiftName: nil, parentProtoPath: descriptor.protoPath, file: self, context: context))
-        }
-
-        var extensions = [ExtensionGenerator]()
-        i = 0
-        for e in descriptor.extension_p {
-            let extPath = path + [7, i]
-            i += 1
-            extensions.append(ExtensionGenerator(descriptor: e, path: extPath, parentProtoPath: descriptor.protoPath, swiftDeclaringMessageName: nil, file: self, context: context))
+        let messages = fileDescriptor.messages.map {
+          return MessageGenerator(descriptor: $0,
+                                  generatorOptions: generatorOptions,
+                                  namer: namer,
+                                  extensionSet: extensionSet)
         }
 
         for e in enums {
@@ -337,70 +120,41 @@ class FileGenerator {
         }
 
         for m in messages {
-            m.generateMainStruct(printer: &p, file: self, parent: nil)
+            m.generateMainStruct(printer: &p, parent: nil, errorString: &errorString)
         }
 
-        var registry = [String]()
-        for e in extensions {
-            registry.append(e.swiftFullExtensionName)
-        }
-        for m in messages {
-            m.registerExtensions(registry: &registry)
-        }
-        if !registry.isEmpty {
-            let pathParts = splitPath(pathname: descriptor.name)
+        if !extensionSet.isEmpty {
+            let pathParts = splitPath(pathname: fileDescriptor.name)
             let filename = pathParts.base + pathParts.suffix
-            p.print("\n")
-            p.print("// MARK: - Extension support defined in \(filename).\n")
+            p.print(
+                "\n",
+                "// MARK: - Extension support defined in \(filename).\n")
 
             // Generate the Swift Extensions on the Messages that provide the api
             // for using the protobuf extension.
-            for e in extensions {
-                e.generateMessageSwiftExtensionForProtobufExtensions(printer: &p)
-            }
-            for m in messages {
-                m.generateMessageSwiftExtensionForProtobufExtensions(printer: &p)
-            }
+            extensionSet.generateMessageSwiftExtensions(printer: &p)
 
             // Generate a registry for the file.
-            let filenameAsIdentifer = toUpperCamelCase(pathParts.base)
-            p.print("\n")
-            p.print("/// A `SwiftProtobuf.SimpleExtensionMap` that includes all of the extensions defined by\n")
-            p.print("/// this .proto file. It can be used any place an `SwiftProtobuf.ExtensionMap` is needed\n")
-            p.print("/// in parsing, or it can be combined with other `SwiftProtobuf.SimpleExtensionMap`s to create\n")
-            p.print("/// a larger `SwiftProtobuf.SimpleExtensionMap`.\n")
-            p.print("\(generatorOptions.visibilitySourceSnippet)let \(descriptor.swiftPrefix)\(filenameAsIdentifer)_Extensions: SwiftProtobuf.SimpleExtensionMap = [\n")
-            p.indent()
-            var separator = ""
-            for e in registry {
-                p.print(separator)
-                p.print(e)
-                separator = ",\n"
-            }
-            p.print("\n")
-            p.outdent()
-            p.print("]\n")
+            extensionSet.generateFileProtobufExtensionRegistry(printer: &p)
 
             // Generate the Extension's declarations (used by the two above things).
+            //
             // This is done after the other two as the only time developers will need
             // these symbols is if they are manually building their own ExtensionMap;
             // so the others are assumed more interesting.
-            for e in extensions {
-                p.print("\n")
-                e.generateProtobufExtensionDeclarations(printer: &p)
-            }
-            for m in messages {
-                m.generateProtobufExtensionDeclarations(printer: &p)
-            }
+            extensionSet.generateProtobufExtensionDeclarations(printer: &p)
         }
 
-        let needsProtoPackage: Bool = !protoPackageName.isEmpty && !messages.isEmpty
+        let protoPackage = fileDescriptor.package
+        let needsProtoPackage: Bool = !protoPackage.isEmpty && !messages.isEmpty
         if needsProtoPackage || !enums.isEmpty || !messages.isEmpty {
-            p.print("\n")
-            p.print("// MARK: - Code below here is support for the SwiftProtobuf runtime.\n")
+            p.print(
+                "\n",
+                "// MARK: - Code below here is support for the SwiftProtobuf runtime.\n")
             if needsProtoPackage {
-                p.print("\n")
-                p.print("fileprivate let _protobuf_package = \"\(protoPackageName)\"\n")
+                p.print(
+                    "\n",
+                    "fileprivate let _protobuf_package = \"\(protoPackage)\"\n")
             }
             for e in enums {
                 e.generateRuntimeSupport(printer: &p)
@@ -413,14 +167,18 @@ class FileGenerator {
 
     private func generateVersionCheck(printer p: inout CodePrinter) {
         let v = Version.compatibilityVersion
-        p.print("// If the compiler emits an error on this type, it is because this file\n")
-        p.print("// was generated by a version of the `protoc` Swift plug-in that is\n")
-        p.print("// incompatible with the version of SwiftProtobuf to which you are linking.\n")
-        p.print("// Please ensure that your are building against the same version of the API\n")
-        p.print("// that was used to generate this file.\n")
-        p.print("fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {\n")
-        p.print("  struct _\(v): SwiftProtobuf.ProtobufAPIVersion_\(v) {}\n")
-        p.print("  typealias Version = _\(v)\n")
+        p.print(
+            "// If the compiler emits an error on this type, it is because this file\n",
+            "// was generated by a version of the `protoc` Swift plug-in that is\n",
+            "// incompatible with the version of SwiftProtobuf to which you are linking.\n",
+            "// Please ensure that your are building against the same version of the API\n",
+            "// that was used to generate this file.\n",
+            "fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {\n")
+        p.indent()
+        p.print(
+            "struct _\(v): SwiftProtobuf.ProtobufAPIVersion_\(v) {}\n",
+            "typealias Version = _\(v)\n")
+        p.outdent()
         p.print("}\n")
     }
 }

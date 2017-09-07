@@ -18,7 +18,7 @@ import Foundation
 /// Visitor that encodes a message graph in the protobuf binary wire format.
 internal struct BinaryEncodingVisitor: Visitor {
 
-  private var encoder: BinaryEncoder
+  var encoder: BinaryEncoder
 
   /// Creates a new visitor that writes the binary-coded message into the memory
   /// at the given pointer.
@@ -28,6 +28,10 @@ internal struct BinaryEncodingVisitor: Visitor {
   ///   reasons, the encoder does not make any attempts to verify this.
   init(forWritingInto pointer: UnsafeMutablePointer<UInt8>) {
     encoder = BinaryEncoder(forWritingInto: pointer)
+  }
+
+  init(encoder: BinaryEncoder) {
+    self.encoder = encoder
   }
 
   mutating func visitUnknown(bytes: Data) throws {
@@ -101,11 +105,10 @@ internal struct BinaryEncodingVisitor: Visitor {
 
   mutating func visitSingularMessageField<M: Message>(value: M,
                                              fieldNumber: Int) throws {
-    // Can force partial to true here because the parent message would have
-    // already recursed for the isInitialized check if it was needed.
-    let t = try value.serializedData(partial: true)
     encoder.startField(fieldNumber: fieldNumber, wireFormat: .lengthDelimited)
-    encoder.putBytesValue(value: t)
+    let length = try value.serializedDataSize()
+    encoder.putVarInt(value: length)
+    try value.traverse(visitor: &self)
   }
 
   mutating func visitSingularGroupField<G: Message>(value: G, fieldNumber: Int) throws {
@@ -251,7 +254,7 @@ internal struct BinaryEncodingVisitor: Visitor {
     encoder.startField(fieldNumber: fieldNumber, wireFormat: .lengthDelimited)
     var packedSize = 0
     for v in value {
-      packedSize += Varint.encodedSize(of: Int32(truncatingBitPattern: v.rawValue))
+      packedSize += Varint.encodedSize(of: Int32(extendingOrTruncating: v.rawValue))
     }
     encoder.putVarInt(value: packedSize)
     for v in value {
@@ -259,11 +262,11 @@ internal struct BinaryEncodingVisitor: Visitor {
     }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: MapValueType>(
+  mutating func visitMapField<KeyType, ValueType: MapValueType>(
     fieldType: _ProtobufMap<KeyType, ValueType>.Type,
     value: _ProtobufMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable {
+  ) throws {
     for (k,v) in value {
       encoder.startField(fieldNumber: fieldNumber, wireFormat: .lengthDelimited)
       var sizer = BinaryEncodingSizeVisitor()
@@ -276,11 +279,11 @@ internal struct BinaryEncodingVisitor: Visitor {
     }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Enum>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
     value: _ProtobufEnumMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable, ValueType.RawValue == Int {
+  ) throws where ValueType.RawValue == Int {
     for (k,v) in value {
       encoder.startField(fieldNumber: fieldNumber, wireFormat: .lengthDelimited)
       var sizer = BinaryEncodingSizeVisitor()
@@ -293,11 +296,11 @@ internal struct BinaryEncodingVisitor: Visitor {
     }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
     value: _ProtobufMessageMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable {
+  ) throws {
     for (k,v) in value {
       encoder.startField(fieldNumber: fieldNumber, wireFormat: .lengthDelimited)
       var sizer = BinaryEncodingSizeVisitor()
@@ -310,8 +313,48 @@ internal struct BinaryEncodingVisitor: Visitor {
     }
   }
 
-  /// Called for each extension range.
-  mutating func visitExtensionFields(fields: ExtensionFieldValueSet, start: Int, end: Int) throws {
-    try fields.traverse(visitor: &self, start: start, end: end)
+  mutating func visitExtensionFieldsAsMessageSet(
+    fields: ExtensionFieldValueSet,
+    start: Int,
+    end: Int
+  ) throws {
+    var subVisitor = BinaryEncodingMessageSetVisitor(encoder: encoder)
+    try fields.traverse(visitor: &subVisitor, start: start, end: end)
+    encoder = subVisitor.encoder
   }
+}
+
+internal extension BinaryEncodingVisitor {
+
+  // Helper Visitor to when writing out the extensions as MessageSets.
+  internal struct BinaryEncodingMessageSetVisitor: SelectiveVisitor {
+    var encoder: BinaryEncoder
+
+    init(encoder: BinaryEncoder) {
+      self.encoder = encoder
+    }
+
+    mutating func visitSingularMessageField<M: Message>(value: M, fieldNumber: Int) throws {
+      encoder.putVarInt(value: Int64(WireFormat.MessageSet.Tags.itemStart.rawValue))
+
+      encoder.putVarInt(value: Int64(WireFormat.MessageSet.Tags.typeId.rawValue))
+      encoder.putVarInt(value: fieldNumber)
+
+      encoder.putVarInt(value: Int64(WireFormat.MessageSet.Tags.message.rawValue))
+
+      // Use a normal BinaryEncodingVisitor so any message fields end up in the
+      // normal wire format (instead of MessageSet format).
+      let length = try value.serializedDataSize()
+      encoder.putVarInt(value: length)
+      // Create the sub encoder after writing the length.
+      var subVisitor = BinaryEncodingVisitor(encoder: encoder)
+      try value.traverse(visitor: &subVisitor)
+      encoder = subVisitor.encoder
+
+      encoder.putVarInt(value: Int64(WireFormat.MessageSet.Tags.itemEnd.rawValue))
+    }
+
+    // SelectiveVisitor handles the rest.
+  }
+
 }

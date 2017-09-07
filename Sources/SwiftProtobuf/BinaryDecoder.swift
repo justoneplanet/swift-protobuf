@@ -18,9 +18,6 @@
 import Foundation
 
 internal struct BinaryDecoder: Decoder {
-    // Used only by packed repeated enums; see below
-    private var unknownOverride: Data?
-
     // Current position
     private var p : UnsafePointer<UInt8>
     // Remaining bytes in input.
@@ -40,17 +37,60 @@ internal struct BinaryDecoder: Decoder {
     // The current group number. See decodeFullGroup(group:fieldNumber:) for how
     // this is used.
     private var groupFieldNumber: Int?
+    // The options for decoding.
+    private var options: BinaryDecodingOptions
 
-    var unknownData: Data?
+    private var recursionBudget: Int
 
-    internal var complete: Bool {return available == 0}
+    // Collects the unknown data found while decoding a message.
+    private var unknownData: Data?
+    // Custom data to use as the unknown data while parsing a field. Used only by
+    // packed repeated enums; see below
+    private var unknownOverride: Data?
 
-    internal init(forReadingFrom pointer: UnsafePointer<UInt8>, count: Int, extensions: ExtensionMap? = nil) {
+    private var complete: Bool {return available == 0}
+
+    internal init(
+      forReadingFrom pointer: UnsafePointer<UInt8>,
+      count: Int,
+      options: BinaryDecodingOptions,
+      extensions: ExtensionMap? = nil
+    ) {
         // Assuming baseAddress is not nil.
         p = pointer
         available = count
         fieldStartP = p
         self.extensions = extensions
+        self.options = options
+        recursionBudget = options.messageDepthLimit
+    }
+
+    internal init(
+      forReadingFrom pointer: UnsafePointer<UInt8>,
+      count: Int,
+      parent: BinaryDecoder
+    ) {
+      self.init(forReadingFrom: pointer,
+                count: count,
+                options: parent.options,
+                extensions: parent.extensions)
+      recursionBudget = parent.recursionBudget
+    }
+
+    private mutating func incrementRecursionDepth() throws {
+        recursionBudget -= 1
+        if recursionBudget < 0 {
+            throw BinaryDecodingError.messageDepthLimit
+        }
+    }
+
+    private mutating func decrementRecursionDepth() {
+        recursionBudget += 1
+        // This should never happen, if it does, something is probably corrupting memory, and
+        // simply throwing doesn't make much sense.
+        if recursionBudget > options.messageDepthLimit {
+            fatalError("Somehow BinaryDecoding unwound more objects than it started")
+        }
     }
 
     internal mutating func handleConflictingOneOf() throws {
@@ -64,6 +104,7 @@ internal struct BinaryDecoder: Decoder {
         // the varint parser.
         if fieldNumber > 0 {
             if let override = unknownOverride {
+                assert(!options.discardUnknownFields)
                 assert(fieldWireFormat != .startGroup && fieldWireFormat != .endGroup)
                 if unknownData == nil {
                     unknownData = override
@@ -72,11 +113,15 @@ internal struct BinaryDecoder: Decoder {
                 }
                 unknownOverride = nil
             } else if !consumed {
-                let u = try getRawField()
-                if unknownData == nil {
-                    unknownData = u
+                if options.discardUnknownFields {
+                    try skip()
                 } else {
-                    unknownData!.append(u)
+                    let u = try getRawField()
+                    if unknownData == nil {
+                        unknownData = u
+                    } else {
+                        unknownData!.append(u)
+                    }
                 }
             }
         }
@@ -193,7 +238,7 @@ internal struct BinaryDecoder: Decoder {
                 if bodyBytes % itemSize != 0 || itemCount > UInt64(Int.max) {
                     throw BinaryDecodingError.truncated
                 }
-                value.reserveCapacity(value.count + Int(truncatingBitPattern: itemCount))
+                value.reserveCapacity(value.count + Int(extendingOrTruncating: itemCount))
                 for _ in 1...itemCount {
                     value.append(try decodeFloat())
                 }
@@ -234,7 +279,7 @@ internal struct BinaryDecoder: Decoder {
                 if bodyBytes % itemSize != 0 || itemCount > UInt64(Int.max) {
                     throw BinaryDecodingError.truncated
                 }
-                value.reserveCapacity(value.count + Int(truncatingBitPattern: itemCount))
+                value.reserveCapacity(value.count + Int(extendingOrTruncating: itemCount))
                 for _ in 1...itemCount {
                     let i = try decodeDouble()
                     value.append(i)
@@ -251,7 +296,7 @@ internal struct BinaryDecoder: Decoder {
             return
         }
         let varint = try decodeVarint()
-        value = Int32(truncatingBitPattern: varint)
+        value = Int32(extendingOrTruncating: varint)
         consumed = true
     }
 
@@ -260,7 +305,7 @@ internal struct BinaryDecoder: Decoder {
             return
         }
         let varint = try decodeVarint()
-        value = Int32(truncatingBitPattern: varint)
+        value = Int32(extendingOrTruncating: varint)
         consumed = true
     }
 
@@ -268,15 +313,17 @@ internal struct BinaryDecoder: Decoder {
         switch fieldWireFormat {
         case WireFormat.varint:
             let varint = try decodeVarint()
-            value.append(Int32(truncatingBitPattern: varint))
+            value.append(Int32(extendingOrTruncating: varint))
             consumed = true
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let varint = try decoder.decodeVarint()
-                value.append(Int32(truncatingBitPattern: varint))
+                value.append(Int32(extendingOrTruncating: varint))
             }
             consumed = true
         default:
@@ -311,7 +358,9 @@ internal struct BinaryDecoder: Decoder {
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let varint = try decoder.decodeVarint()
                 value.append(Int64(bitPattern: varint))
@@ -327,7 +376,7 @@ internal struct BinaryDecoder: Decoder {
             return
         }
         let varint = try decodeVarint()
-        value = UInt32(truncatingBitPattern: varint)
+        value = UInt32(extendingOrTruncating: varint)
         consumed = true
     }
 
@@ -336,7 +385,7 @@ internal struct BinaryDecoder: Decoder {
             return
         }
         let varint = try decodeVarint()
-        value = UInt32(truncatingBitPattern: varint)
+        value = UInt32(extendingOrTruncating: varint)
         consumed = true
     }
 
@@ -344,15 +393,17 @@ internal struct BinaryDecoder: Decoder {
         switch fieldWireFormat {
         case WireFormat.varint:
             let varint = try decodeVarint()
-            value.append(UInt32(truncatingBitPattern: varint))
+            value.append(UInt32(extendingOrTruncating: varint))
             consumed = true
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let t = try decoder.decodeVarint()
-                value.append(UInt32(truncatingBitPattern: t))
+                value.append(UInt32(extendingOrTruncating: t))
             }
             consumed = true
         default:
@@ -385,7 +436,9 @@ internal struct BinaryDecoder: Decoder {
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let t = try decoder.decodeVarint()
                 value.append(t)
@@ -401,7 +454,7 @@ internal struct BinaryDecoder: Decoder {
             return
         }
         let varint = try decodeVarint()
-        let t = UInt32(truncatingBitPattern: varint)
+        let t = UInt32(extendingOrTruncating: varint)
         value = ZigZag.decoded(t)
         consumed = true
     }
@@ -411,7 +464,7 @@ internal struct BinaryDecoder: Decoder {
             return
         }
         let varint = try decodeVarint()
-        let t = UInt32(truncatingBitPattern: varint)
+        let t = UInt32(extendingOrTruncating: varint)
         value = ZigZag.decoded(t)
         consumed = true
     }
@@ -420,16 +473,18 @@ internal struct BinaryDecoder: Decoder {
         switch fieldWireFormat {
         case WireFormat.varint:
             let varint = try decodeVarint()
-            let t = UInt32(truncatingBitPattern: varint)
+            let t = UInt32(extendingOrTruncating: varint)
             value.append(ZigZag.decoded(t))
             consumed = true
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let varint = try decoder.decodeVarint()
-                let t = UInt32(truncatingBitPattern: varint)
+                let t = UInt32(extendingOrTruncating: varint)
                 value.append(ZigZag.decoded(t))
             }
             consumed = true
@@ -465,7 +520,9 @@ internal struct BinaryDecoder: Decoder {
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let varint = try decoder.decodeVarint()
                 value.append(ZigZag.decoded(varint))
@@ -507,7 +564,7 @@ internal struct BinaryDecoder: Decoder {
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
             value.reserveCapacity(value.count + n / MemoryLayout<UInt32>.size)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             var i: UInt32 = 0
             while !decoder.complete {
                 try decoder.decodeFourByteNumber(value: &i)
@@ -550,7 +607,7 @@ internal struct BinaryDecoder: Decoder {
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
             value.reserveCapacity(value.count + n / MemoryLayout<UInt64>.size)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             var i: UInt64 = 0
             while !decoder.complete {
                 try decoder.decodeEightByteNumber(value: &i)
@@ -593,7 +650,7 @@ internal struct BinaryDecoder: Decoder {
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
             value.reserveCapacity(value.count + n / MemoryLayout<Int32>.size)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             var i: Int32 = 0
             while !decoder.complete {
                 try decoder.decodeFourByteNumber(value: &i)
@@ -636,7 +693,7 @@ internal struct BinaryDecoder: Decoder {
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
             value.reserveCapacity(value.count + n / MemoryLayout<Int64>.size)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             var i: Int64 = 0
             while !decoder.complete {
                 try decoder.decodeEightByteNumber(value: &i)
@@ -673,7 +730,9 @@ internal struct BinaryDecoder: Decoder {
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            var decoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var decoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !decoder.complete {
                 let t = try decoder.decodeVarint()
                 value.append(t != 0)
@@ -765,7 +824,7 @@ internal struct BinaryDecoder: Decoder {
              return
          }
         let varint = try decodeVarint()
-        if let v = E(rawValue: Int(Int32(truncatingBitPattern: varint))) {
+        if let v = E(rawValue: Int(Int32(extendingOrTruncating: varint))) {
             value = v
             consumed = true
         }
@@ -776,7 +835,7 @@ internal struct BinaryDecoder: Decoder {
              return
         }
         let varint = try decodeVarint()
-        if let v = E(rawValue: Int(Int32(truncatingBitPattern: varint))) {
+        if let v = E(rawValue: Int(Int32(extendingOrTruncating: varint))) {
             value = v
             consumed = true
         }
@@ -786,25 +845,30 @@ internal struct BinaryDecoder: Decoder {
         switch fieldWireFormat {
         case WireFormat.varint:
             let varint = try decodeVarint()
-            if let v = E(rawValue: Int(Int32(truncatingBitPattern: varint))) {
+            if let v = E(rawValue: Int(Int32(extendingOrTruncating: varint))) {
                 value.append(v)
                 consumed = true
             }
         case WireFormat.lengthDelimited:
             var n: Int = 0
-            var extras = [Int32]()
+            var extras: [Int32]?
             let p = try getFieldBodyBytes(count: &n)
-            var subdecoder = BinaryDecoder(forReadingFrom: p, count: n)
+            let ints = Varint.countVarintsInBuffer(start: p, count: n)
+            value.reserveCapacity(value.count + ints)
+            var subdecoder = BinaryDecoder(forReadingFrom: p, count: n, parent: self)
             while !subdecoder.complete {
                 let u64 = try subdecoder.decodeVarint()
-                let i32 = Int32(truncatingBitPattern: u64)
+                let i32 = Int32(extendingOrTruncating: u64)
                 if let v = E(rawValue: Int(i32)) {
                     value.append(v)
-                } else {
-                    extras.append(i32)
+                } else if !options.discardUnknownFields {
+                    if extras == nil {
+                        extras = []
+                    }
+                    extras!.append(i32)
                 }
             }
-            if !extras.isEmpty {
+            if let extras = extras {
                 let fieldTag = FieldTag(fieldNumber: fieldNumber, wireFormat: .lengthDelimited)
                 var bodySize = 0
                 for v in extras {
@@ -837,7 +901,8 @@ internal struct BinaryDecoder: Decoder {
         if value == nil {
             value = M()
         }
-        try value!._protobuf_mergeSerializedBytes(from: p, count: count, extensions: extensions)
+        var subDecoder = BinaryDecoder(forReadingFrom: p, count: count, parent: self)
+        try subDecoder.decodeFullMessage(message: &value!)
         consumed = true
     }
 
@@ -848,9 +913,22 @@ internal struct BinaryDecoder: Decoder {
         var count: Int = 0
         let p = try getFieldBodyBytes(count: &count)
         var newValue = M()
-        try newValue._protobuf_mergeSerializedBytes(from: p, count: count, extensions: extensions)
+        var subDecoder = BinaryDecoder(forReadingFrom: p, count: count, parent: self)
+        try subDecoder.decodeFullMessage(message: &newValue)
         value.append(newValue)
         consumed = true
+    }
+
+    internal mutating func decodeFullMessage<M: Message>(message: inout M) throws {
+      try incrementRecursionDepth()
+      try message.decodeMessage(decoder: &self)
+      decrementRecursionDepth()
+      guard complete else {
+        throw BinaryDecodingError.trailingGarbage
+      }
+      if let unknownData = unknownData {
+        message.unknownFields.append(protobufData: unknownData)
+      }
     }
 
     internal mutating func decodeSingularGroupField<G: Message>(value: inout G?) throws {
@@ -875,6 +953,8 @@ internal struct BinaryDecoder: Decoder {
         }
         assert(unknownData == nil)
 
+        try incrementRecursionDepth()
+
         // This works by making a clone of the current decoder state and
         // setting `groupFieldNumber` to signal `nextFieldNumber()` to watch
         // for that as a marker for having reached the end of a group/message.
@@ -895,10 +975,12 @@ internal struct BinaryDecoder: Decoder {
         }
         // Advance over what was parsed.
         consume(length: available - subDecoder.available)
+        assert(recursionBudget == subDecoder.recursionBudget)
+        decrementRecursionDepth()
         return true
     }
 
-    internal mutating func decodeMapField<KeyType: MapKeyType, ValueType: MapValueType>(fieldType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws {
+    internal mutating func decodeMapField<KeyType, ValueType: MapValueType>(fieldType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws {
         guard fieldWireFormat == WireFormat.lengthDelimited else {
             return
         }
@@ -906,7 +988,7 @@ internal struct BinaryDecoder: Decoder {
         var v: ValueType.BaseType?
         var count: Int = 0
         let p = try getFieldBodyBytes(count: &count)
-        var subdecoder = BinaryDecoder(forReadingFrom: p, count: count, extensions: extensions)
+        var subdecoder = BinaryDecoder(forReadingFrom: p, count: count, parent: self)
         while let tag = try subdecoder.getTag() {
             if tag.wireFormat == .endGroup {
                 throw BinaryDecodingError.malformedProtobuf
@@ -933,7 +1015,7 @@ internal struct BinaryDecoder: Decoder {
         consumed = true
     }
 
-    internal mutating func decodeMapField<KeyType: MapKeyType, ValueType: Enum>(fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int {
+    internal mutating func decodeMapField<KeyType, ValueType>(fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int {
         guard fieldWireFormat == WireFormat.lengthDelimited else {
             return
         }
@@ -941,7 +1023,7 @@ internal struct BinaryDecoder: Decoder {
         var v: ValueType?
         var count: Int = 0
         let p = try getFieldBodyBytes(count: &count)
-        var subdecoder = BinaryDecoder(forReadingFrom: p, count: count, extensions: extensions)
+        var subdecoder = BinaryDecoder(forReadingFrom: p, count: count, parent: self)
         while let tag = try subdecoder.getTag() {
             if tag.wireFormat == .endGroup {
                 throw BinaryDecodingError.malformedProtobuf
@@ -973,7 +1055,7 @@ internal struct BinaryDecoder: Decoder {
         consumed = true
     }
 
-    internal mutating func decodeMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws {
+    internal mutating func decodeMapField<KeyType, ValueType>(fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws {
         guard fieldWireFormat == WireFormat.lengthDelimited else {
             return
         }
@@ -981,7 +1063,7 @@ internal struct BinaryDecoder: Decoder {
         var v: ValueType?
         var count: Int = 0
         let p = try getFieldBodyBytes(count: &count)
-        var subdecoder = BinaryDecoder(forReadingFrom: p, count: count, extensions: extensions)
+        var subdecoder = BinaryDecoder(forReadingFrom: p, count: count, parent: self)
         while let tag = try subdecoder.getTag() {
             if tag.wireFormat == .endGroup {
                 throw BinaryDecodingError.malformedProtobuf
@@ -1005,15 +1087,184 @@ internal struct BinaryDecoder: Decoder {
         consumed = true
     }
 
-    internal mutating func decodeExtensionField(values: inout ExtensionFieldValueSet, messageType: Message.Type, fieldNumber: Int) throws {
+    internal mutating func decodeExtensionField(
+      values: inout ExtensionFieldValueSet,
+      messageType: Message.Type,
+      fieldNumber: Int
+    ) throws {
         if let ext = extensions?[messageType, fieldNumber] {
-            var fieldValue = values[fieldNumber] ?? ext._protobuf_newField()
-            assert(!consumed)
-            try fieldValue.decodeExtensionField(decoder: &self)
-            if consumed {
-              values[fieldNumber] = fieldValue
+            try decodeExtensionField(values: &values,
+                                     messageType: messageType,
+                                     fieldNumber: fieldNumber,
+                                     messageExtension: ext)
+        }
+    }
+
+    /// Helper to reuse between Extension decoding and MessageSet Extension decoding.
+    private mutating func decodeExtensionField(
+      values: inout ExtensionFieldValueSet,
+      messageType: Message.Type,
+      fieldNumber: Int,
+      messageExtension ext: AnyMessageExtension
+    ) throws {
+        assert(!consumed)
+        assert(fieldNumber == ext.fieldNumber)
+        var fieldValue = values[fieldNumber]
+        // Message/Group extensions both will call back into the matching
+        // decode methods, so the recursion depth will be tracked there.
+        if fieldValue != nil {
+            try fieldValue!.decodeExtensionField(decoder: &self)
+        } else {
+            fieldValue = try ext._protobuf_newField(decoder: &self)
+        }
+        if consumed {
+            if fieldValue != nil {
+                values[fieldNumber] = fieldValue
+            } else {
+                // Really things should never get here, if the decoder says
+                // the bytes were consumed, then there should have been a
+                // field that consumed them (existing or created). This
+                // specific error result is to allow this to be more detectable.
+                throw BinaryDecodingError.internalExtensionError
             }
         }
+    }
+
+    internal mutating func decodeExtensionFieldsAsMessageSet(
+      values: inout ExtensionFieldValueSet,
+      messageType: Message.Type
+    ) throws {
+        // Spin looking for the Item group, everything else will end up in unknown fields.
+        while let fieldNumber = try self.nextFieldNumber() {
+            guard fieldNumber == WireFormat.MessageSet.FieldNumbers.item &&
+              fieldWireFormat == WireFormat.startGroup else {
+                continue
+            }
+
+            // This is similiar to decodeFullGroup
+
+            try incrementRecursionDepth()
+            var subDecoder = self
+            subDecoder.groupFieldNumber = fieldNumber
+            subDecoder.consumed = true
+
+            let itemResult = try subDecoder.decodeMessageSetItem(values: &values,
+                                                                 messageType: messageType)
+            switch itemResult {
+            case .success:
+              // Advance over what was parsed.
+              consume(length: available - subDecoder.available)
+              consumed = true
+            case .handleAsUnknown:
+              // Nothing to do.
+              break
+
+            case .malformed:
+              throw BinaryDecodingError.malformedProtobuf
+            }
+
+            assert(recursionBudget == subDecoder.recursionBudget)
+            decrementRecursionDepth()
+        }
+    }
+
+    private enum DecodeMessageSetItemResult {
+      case success
+      case handleAsUnknown
+      case malformed
+    }
+
+    private mutating func decodeMessageSetItem(
+      values: inout ExtensionFieldValueSet,
+      messageType: Message.Type
+    ) throws -> DecodeMessageSetItemResult {
+        // This is loosely based on the C++:
+        //   ExtensionSet::ParseMessageSetItem()
+        //   WireFormat::ParseAndMergeMessageSetItem()
+        // (yes, there have two versions that are almost the same)
+
+        var msgExtension: AnyMessageExtension?
+        var fieldData: Data?
+
+        // In this loop, if wire types are wrong, things don't decode,
+        // just bail instead of letting things go into unknown fields.
+        // Wrongly formed MessageSets don't seem don't have real
+        // spelled out behaviors.
+        while let fieldNumber = try self.nextFieldNumber() {
+            switch fieldNumber {
+            case WireFormat.MessageSet.FieldNumbers.typeId:
+                var extensionFieldNumber: Int32 = 0
+                try decodeSingularInt32Field(value: &extensionFieldNumber)
+                if extensionFieldNumber == 0 { return .malformed }
+                guard let ext = extensions?[messageType, Int(extensionFieldNumber)] else {
+                    return .handleAsUnknown  // Unknown extension.
+                }
+                msgExtension = ext
+
+                // If there already was fieldData, decode it.
+                if let data = fieldData {
+                    var wasDecoded = false
+                    try data.withUnsafeBytes { (pointer: UnsafePointer<UInt8>) in
+                        var extDecoder = BinaryDecoder(forReadingFrom: pointer,
+                                                       count: data.count,
+                                                       parent: self)
+                        // Prime the decode to be correct.
+                        extDecoder.consumed = false
+                        extDecoder.fieldWireFormat = .lengthDelimited
+                        try extDecoder.decodeExtensionField(values: &values,
+                                                            messageType: messageType,
+                                                            fieldNumber: fieldNumber,
+                                                            messageExtension: ext)
+                        wasDecoded = extDecoder.consumed
+                    }
+                    if !wasDecoded {
+                        return .malformed
+                    }
+                    fieldData = nil
+                }
+
+            case WireFormat.MessageSet.FieldNumbers.message:
+                if let ext = msgExtension {
+                    assert(consumed == false)
+                    try decodeExtensionField(values: &values,
+                                             messageType: messageType,
+                                             fieldNumber: ext.fieldNumber,
+                                             messageExtension: ext)
+                    if !consumed {
+                        return .malformed
+                    }
+                } else {
+                    // The C++ references ends up appending the blocks together as length
+                    // delimited blocks, but the parsing will only use the first block.
+                    // So just capture a block, and then skip any others that happen to
+                    // be found.
+                    if fieldData == nil {
+                        var d: Data?
+                        try decodeSingularBytesField(value: &d)
+                        guard let data = d else { return .malformed }
+                        // Save it as length delimited
+                        let payloadSize = Varint.encodedSize(of: Int64(data.count)) + data.count
+                        var payload = Data(count: payloadSize)
+                        payload.withUnsafeMutableBytes { (pointer: UnsafeMutablePointer<UInt8>) in
+                            var encoder = BinaryEncoder(forWritingInto: pointer)
+                            encoder.putBytesValue(value: data)
+                        }
+                        fieldData = payload
+                    } else {
+                        guard fieldWireFormat == .lengthDelimited else { return .malformed }
+                        try skip()
+                        consumed = true
+                    }
+                }
+
+            default:
+                // Skip everything else
+                try skip()
+                consumed = true
+            }
+        }
+
+        return .success
     }
 
     //
@@ -1063,10 +1314,12 @@ internal struct BinaryDecoder: Decoder {
                 throw BinaryDecodingError.truncated
             }
         case .startGroup:
+            try incrementRecursionDepth()
             while true {
                 if let innerTag = try getTagWithoutUpdatingFieldStart() {
                     if innerTag.wireFormat == .endGroup {
                         if innerTag.fieldNumber == tag.fieldNumber {
+                            decrementRecursionDepth()
                             break
                         } else {
                             // .endGroup for a something other than the current
@@ -1164,7 +1417,7 @@ internal struct BinaryDecoder: Decoder {
         }
         let t = try decodeVarint()
         if t < UInt64(UInt32.max) {
-            guard let tag = FieldTag(rawValue: UInt32(truncatingBitPattern: t)) else {
+            guard let tag = FieldTag(rawValue: UInt32(extendingOrTruncating: t)) else {
                 throw BinaryDecodingError.malformedProtobuf
             }
             fieldWireFormat = tag.wireFormat

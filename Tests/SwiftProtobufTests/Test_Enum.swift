@@ -18,20 +18,20 @@ import Foundation
 import XCTest
 
 class Test_Enum: XCTestCase, PBTestHelpers {
-    typealias MessageTestType = Proto3TestAllTypes
+    typealias MessageTestType = Proto3Unittest_TestAllTypes
 
     func testEqual() {
-        XCTAssertEqual(Proto3TestEnumWithDupValue.foo1, Proto3TestEnumWithDupValue.foo2)
-        XCTAssertNotEqual(Proto3TestEnumWithDupValue.foo1, Proto3TestEnumWithDupValue.bar1)
+        XCTAssertEqual(ProtobufUnittest_TestEnumWithDupValue.foo1, ProtobufUnittest_TestEnumWithDupValue.foo2)
+        XCTAssertNotEqual(ProtobufUnittest_TestEnumWithDupValue.foo1, ProtobufUnittest_TestEnumWithDupValue.bar1)
     }
 
     func testJSONsingular() {
-        assertJSONEncode("{\"singleNestedEnum\":\"FOO\"}") { (m: inout MessageTestType) in
-            m.singleNestedEnum = Proto3TestAllTypes.NestedEnum.foo
+        assertJSONEncode("{\"optionalNestedEnum\":\"FOO\"}") { (m: inout MessageTestType) in
+            m.optionalNestedEnum = Proto3Unittest_TestAllTypes.NestedEnum.foo
         }
 
-        assertJSONEncode("{\"singleNestedEnum\":777}") { (m: inout MessageTestType) in
-            m.singleNestedEnum = .UNRECOGNIZED(777)
+        assertJSONEncode("{\"optionalNestedEnum\":777}") { (m: inout MessageTestType) in
+            m.optionalNestedEnum = .UNRECOGNIZED(777)
         }
     }
 
@@ -44,7 +44,7 @@ class Test_Enum: XCTestCase, PBTestHelpers {
     func testEnumPrefix() {
         XCTAssertEqual(ProtobufUnittest_SwiftEnumTest.EnumTest1.firstValue.rawValue, 1)
         XCTAssertEqual(ProtobufUnittest_SwiftEnumTest.EnumTest1.secondValue.rawValue, 2)
-        XCTAssertEqual(ProtobufUnittest_SwiftEnumTest.EnumTest2.enumTest2FirstValue.rawValue, 1)
+        XCTAssertEqual(ProtobufUnittest_SwiftEnumTest.EnumTest2.firstValue.rawValue, 1)
         XCTAssertEqual(ProtobufUnittest_SwiftEnumTest.EnumTest2.secondValue.rawValue, 2)
     }
 

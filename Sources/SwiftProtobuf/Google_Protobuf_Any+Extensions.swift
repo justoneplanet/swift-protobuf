@@ -16,6 +16,8 @@
 // don't remove unless obsolete on all platforms
 import Foundation
 
+public let defaultAnyTypeURLPrefix: String = "type.googleapis.com"
+
 public extension Google_Protobuf_Any {
   /// Initialize an Any object from the provided message.
   ///
@@ -38,7 +40,7 @@ public extension Google_Protobuf_Any {
   public init(
     message: Message,
     partial: Bool = false,
-    typePrefix: String = defaultTypePrefix
+    typePrefix: String = defaultAnyTypeURLPrefix
   ) throws {
     if !partial && !message.isInitialized {
       throw BinaryEncodingError.missingRequiredFields

@@ -73,9 +73,30 @@ extension PBTestHelpers where MessageTestType: SwiftProtobuf.Message & Equatable
         baseAssertDecodeSucceeds(bytes, file: file, line: line, check: check)
     }
 
-    func assertDecodesAsUnknownFields(_ bytes: [UInt8], file: XCTestFileArgType = #file, line: UInt = #line) {
+    // Helper to check that decode succeeds by the data ended up in unknown fields.
+    // Supports an optional `check` to do additional validation.
+    func assertDecodesAsUnknownFields(_ bytes: [UInt8], file: XCTestFileArgType = #file, line: UInt = #line, check: ((MessageTestType) -> Bool)? = nil) {
         assertDecodeSucceeds(bytes, file: file, line: line) {
-            $0.unknownFields.data == Data(bytes: bytes)
+            if $0.unknownFields.data != Data(bytes: bytes) {
+                return false
+            }
+            if let check = check {
+                return check($0)
+            }
+            return true
+        }
+    }
+
+    func assertMergesAsUnknownFields(_ bytes: [UInt8], inTo message: MessageTestType, file: XCTestFileArgType = #file, line: UInt = #line, check: ((MessageTestType) -> Bool)? = nil) {
+        var msgCopy = message
+        do {
+            try msgCopy.merge(serializedData: Data(bytes: bytes))
+        } catch let e {
+            XCTFail("Failed to decode: \(e)", file: file, line: line)
+        }
+        XCTAssertEqual(msgCopy.unknownFields.data, Data(bytes: bytes), file: file, line: line)
+        if let check = check {
+            XCTAssert(check(msgCopy), "Condition failed for \(msgCopy)", file: file, line: line)
         }
     }
 
@@ -143,12 +164,31 @@ extension PBTestHelpers where MessageTestType: SwiftProtobuf.Message & Equatable
         XCTAssert(configured != empty, "Object should not be equal to empty object", file: file, line: line)
         let encoded = configured.textFormatString()
 
-        XCTAssert(expected == encoded, "Did not encode correctly: got \(encoded)", file: file, line: line)
+        XCTAssertEqual(expected, encoded, "Did not encode correctly", file: file, line: line)
         do {
             let decoded = try MessageTestType(textFormatString: encoded, extensions: extensions)
             XCTAssert(decoded == configured, "Encode/decode cycle should generate equal object: \(decoded) != \(configured)", file: file, line: line)
         } catch {
             XCTFail("Encode/decode cycle should not throw error but got \(error) while decoding \(encoded)", file: file, line: line)
+        }
+    }
+
+    func assertJSONArrayEncode(_ expected: String, file: XCTestFileArgType = #file, line: UInt = #line, configure: (inout [MessageTestType]) -> Void) {
+        let empty = [MessageTestType]()
+        var configured = empty
+        configure(&configured)
+        XCTAssert(configured != empty, "Object should not be equal to empty object", file: file, line: line)
+        do {
+            let encoded = try MessageTestType.jsonString(from: configured)
+            XCTAssert(expected == encoded, "Did not encode correctly: got \(encoded)", file: file, line: line)
+            do {
+                let decoded = try MessageTestType.array(fromJSONString: encoded)
+                XCTAssert(decoded == configured, "Encode/decode cycle should generate equal object: \(decoded) != \(configured)", file: file, line: line)
+            } catch {
+                XCTFail("Encode/decode cycle should not throw error decoding: \(encoded), but it threw \(error)", file: file, line: line)
+            }
+        } catch let e {
+            XCTFail("Failed to serialize JSON: \(e)\n    \(configured)", file: file, line: line)
         }
     }
 
@@ -203,6 +243,29 @@ extension PBTestHelpers where MessageTestType: SwiftProtobuf.Message & Equatable
         }
     }
 
+    func assertJSONArrayDecodeSucceeds(_ json: String, file: XCTestFileArgType = #file, line: UInt = #line, check: ([MessageTestType]) -> Bool) {
+        do {
+            let decoded: [MessageTestType] = try MessageTestType.array(fromJSONString: json)
+            XCTAssert(check(decoded), "Condition failed for \(decoded)", file: file, line: line)
+
+            do {
+                let encoded = try MessageTestType.jsonString(from: decoded)
+                do {
+                    let redecoded = try MessageTestType.array(fromJSONString: json)
+                    XCTAssert(check(redecoded), "Condition failed for redecoded \(redecoded)", file: file, line: line)
+                    XCTAssertEqual(decoded, redecoded, file: file, line: line)
+                } catch {
+                    XCTFail("Swift should have recoded/redecoded without error: \(encoded)", file: file, line: line)
+                }
+            } catch let e {
+                XCTFail("Swift should have recoded without error but got \(e)\n    \(decoded)", file: file, line: line)
+            }
+        } catch let e {
+            XCTFail("Swift should have decoded without error but got \(e): \(json)", file: file, line: line)
+            return
+        }
+    }
+
     func assertJSONDecodeFails(_ json: String, file: XCTestFileArgType = #file, line: UInt = #line) {
         do {
             let _ = try MessageTestType(jsonString: json)
@@ -220,4 +283,82 @@ extension PBTestHelpers where MessageTestType: SwiftProtobuf.Message & Equatable
             // Yay! It failed!
         }
     }
+
+    func assertJSONArrayDecodeFails(_ json: String, file: XCTestFileArgType = #file, line: UInt = #line) {
+        do {
+            let _ = try MessageTestType.array(fromJSONString: json)
+            XCTFail("Swift decode should have failed: \(json)", file: file, line: line)
+        } catch {
+            // Yay! It failed!
+        }
+    }
+}
+
+/// Protocol to help write visitor for testing.  It provides default implementaions
+/// that will cause a failure if anything gets called.  This way specific tests can
+/// just hook the methods they intend to validate.
+protocol PBTestVisitor: Visitor {
+  // Adds nothing.
+}
+
+extension PBTestVisitor {
+  mutating func visitUnknown(bytes: Data) throws {
+    XCTFail("Unexpected unknowns: \(bytes)")
+  }
+
+  mutating func visitSingularBoolField(value: Bool, fieldNumber: Int) throws {
+    XCTFail("Unexpected bool: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularBytesField(value: Data, fieldNumber: Int) throws {
+    XCTFail("Unexpected bytes: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularDoubleField(value: Double, fieldNumber: Int) throws {
+    XCTFail("Unexpected Int64: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularEnumField<E: Enum>(value: E, fieldNumber: Int) throws {
+    XCTFail("Unexpected Enum: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularInt64Field(value: Int64, fieldNumber: Int) throws {
+    XCTFail("Unexpected Int64: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularMessageField<M: Message>(value: M, fieldNumber: Int) throws {
+    XCTFail("Unexpected Message: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularStringField(value: String, fieldNumber: Int) throws {
+    XCTFail("Unexpected String: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitSingularUInt64Field(value: UInt64, fieldNumber: Int) throws {
+    XCTFail("Unexpected UInt64: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitMapField<KeyType, ValueType: MapValueType>(
+    fieldType: _ProtobufMap<KeyType, ValueType>.Type,
+    value: _ProtobufMap<KeyType, ValueType>.BaseType,
+    fieldNumber: Int
+  ) throws {
+    XCTFail("Unexpected map<*, *>: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitMapField<KeyType, ValueType>(
+    fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
+    value: _ProtobufEnumMap<KeyType, ValueType>.BaseType,
+    fieldNumber: Int
+  ) throws where ValueType.RawValue == Int {
+    XCTFail("Unexpected map<*, Enum>: \(fieldNumber) = \(value)")
+  }
+
+  mutating func visitMapField<KeyType, ValueType>(
+    fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
+    value: _ProtobufMessageMap<KeyType, ValueType>.BaseType,
+    fieldNumber: Int
+  ) throws {
+    XCTFail("Unexpected map<*, Message>: \(fieldNumber) = \(value)")
+  }
 }

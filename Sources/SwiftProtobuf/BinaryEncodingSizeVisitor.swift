@@ -211,7 +211,7 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
     let tagSize = FieldTag(fieldNumber: fieldNumber,
                            wireFormat: .varint).encodedSize
     serializedSize += tagSize
-    let dataSize = Varint.encodedSize(of: Int32(truncatingBitPattern: value.rawValue))
+    let dataSize = Varint.encodedSize(of: Int32(extendingOrTruncating: value.rawValue))
     serializedSize += dataSize
   }
 
@@ -221,7 +221,7 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
                            wireFormat: .varint).encodedSize
     serializedSize += value.count * tagSize
     for v in value {
-      let dataSize = Varint.encodedSize(of: Int32(truncatingBitPattern: v.rawValue))
+      let dataSize = Varint.encodedSize(of: Int32(extendingOrTruncating: v.rawValue))
       serializedSize += dataSize
     }
   }
@@ -237,7 +237,7 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
     serializedSize += tagSize
     var dataSize = 0
     for v in value {
-      dataSize += Varint.encodedSize(of: Int32(truncatingBitPattern: v.rawValue))
+      dataSize += Varint.encodedSize(of: Int32(extendingOrTruncating: v.rawValue))
     }
     serializedSize += Varint.encodedSize(of: Int64(dataSize)) + dataSize
   }
@@ -282,11 +282,11 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
     }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: MapValueType>(
+  mutating func visitMapField<KeyType, ValueType: MapValueType>(
     fieldType: _ProtobufMap<KeyType, ValueType>.Type,
     value: _ProtobufMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable {
+  ) throws {
     let tagSize = FieldTag(fieldNumber: fieldNumber,
                            wireFormat: .lengthDelimited).encodedSize
     for (k,v) in value {
@@ -299,11 +299,11 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
     serializedSize += value.count * tagSize
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Enum>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
     value: _ProtobufEnumMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable, ValueType.RawValue == Int {
+  ) throws where ValueType.RawValue == Int {
     let tagSize = FieldTag(fieldNumber: fieldNumber,
                            wireFormat: .lengthDelimited).encodedSize
     for (k,v) in value {
@@ -316,11 +316,11 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
     serializedSize += value.count * tagSize
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
     value: _ProtobufMessageMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable {
+  ) throws {
     let tagSize = FieldTag(fieldNumber: fieldNumber,
                            wireFormat: .lengthDelimited).encodedSize
     for (k,v) in value {
@@ -333,8 +333,37 @@ internal struct BinaryEncodingSizeVisitor: Visitor {
     serializedSize += value.count * tagSize
   }
 
-  /// Called for each extension range.
-  mutating func visitExtensionFields(fields: ExtensionFieldValueSet, start: Int, end: Int) throws {
-    try fields.traverse(visitor: &self, start: start, end: end)
+  mutating func visitExtensionFieldsAsMessageSet(
+    fields: ExtensionFieldValueSet,
+    start: Int,
+    end: Int
+  ) throws {
+    var sizer = BinaryEncodingMessageSetSizeVisitor()
+    try fields.traverse(visitor: &sizer, start: start, end: end)
+    serializedSize += sizer.serializedSize
   }
+}
+
+internal extension BinaryEncodingSizeVisitor {
+
+  // Helper Visitor to compute the sizes when writing out the extensions as MessageSets.
+  internal struct BinaryEncodingMessageSetSizeVisitor: SelectiveVisitor {
+    var serializedSize: Int = 0
+
+    init() {}
+
+    mutating func visitSingularMessageField<M: Message>(value: M, fieldNumber: Int) throws {
+      var groupSize = WireFormat.MessageSet.itemTagsEncodedSize
+
+      groupSize += Varint.encodedSize(of: Int32(fieldNumber))
+
+      let messageSize = try value.serializedDataSize()
+      groupSize += Varint.encodedSize(of: UInt64(messageSize)) + messageSize
+
+      serializedSize += groupSize
+    }
+
+    // SelectiveVisitor handles the rest.
+  }
+
 }

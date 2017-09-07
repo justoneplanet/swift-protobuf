@@ -403,40 +403,45 @@ public protocol Visitor {
   /// implementations.
   mutating func visitPackedEnumField<E: Enum>(value: [E], fieldNumber: Int) throws
 
-
   /// Called for each map field with primitive values. The method is
   /// called once with the complete dictionary of keys/values for the
   /// field.
   ///
   /// There is no default implementation.  This must be implemented.
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: MapValueType>(
+  mutating func visitMapField<KeyType, ValueType: MapValueType>(
     fieldType: _ProtobufMap<KeyType, ValueType>.Type,
     value: _ProtobufMap<KeyType, ValueType>.BaseType,
-    fieldNumber: Int) throws where KeyType.BaseType: Hashable
+    fieldNumber: Int) throws
 
   /// Called for each map field with enum values. The method is called
   /// once with the complete dictionary of keys/values for the field.
   ///
   /// There is no default implementation.  This must be implemented.
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Enum>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
     value: _ProtobufEnumMap<KeyType, ValueType>.BaseType,
-    fieldNumber: Int) throws where KeyType.BaseType: Hashable, ValueType.RawValue == Int
+    fieldNumber: Int) throws where ValueType.RawValue == Int
 
   /// Called for each map field with message values. The method is
   /// called once with the complete dictionary of keys/values for the
   /// field.
   ///
   /// There is no default implementation.  This must be implemented.
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
     value: _ProtobufMessageMap<KeyType, ValueType>.BaseType,
-    fieldNumber: Int) throws where KeyType.BaseType: Hashable
+    fieldNumber: Int) throws
 
   /// Called for each extension range.
   mutating func visitExtensionFields(fields: ExtensionFieldValueSet, start: Int, end: Int) throws
 
-  /// Called with the raw bytes that represent any proto2 unknown fields.
+  /// Called for each extension range.
+  mutating func visitExtensionFieldsAsMessageSet(
+    fields: ExtensionFieldValueSet,
+    start: Int,
+    end: Int) throws
+
+  /// Called with the raw bytes that represent any unknown fields.
   mutating func visitUnknown(bytes: Data) throws
 }
 
@@ -664,5 +669,25 @@ extension Visitor {
   public mutating func visitSingularGroupField<G: Message>(value: G,
                                                   fieldNumber: Int) throws {
     try visitSingularMessageField(value: value, fieldNumber: fieldNumber)
+  }
+
+  // Default handling of Extensions as a MessageSet to handing them just
+  // as plain extensions. Formats that what custom behavior can override
+  // it.
+
+  public mutating func visitExtensionFieldsAsMessageSet(
+    fields: ExtensionFieldValueSet,
+    start: Int,
+    end: Int) throws {
+    try visitExtensionFields(fields: fields, start: start, end: end)
+  }
+
+  // Default handling for Extensions is to forward the traverse to
+  // the ExtensionFieldValueSet. Formats that don't care about extensions
+  // can override to avoid it.
+
+  /// Called for each extension range.
+  public mutating func visitExtensionFields(fields: ExtensionFieldValueSet, start: Int, end: Int) throws {
+    try fields.traverse(visitor: &self, start: start, end: end)
   }
 }

@@ -17,585 +17,201 @@ import PluginLibrary
 import SwiftProtobuf
 
 
-/// This must be exactly the same as the corresponding code in the
-/// SwiftProtobuf library.  Changing it will break compatibility of
-/// the generated code with old library version.
-///
-private func toJsonFieldName(_ s: String) -> String {
-    var result = ""
-    var capitalizeNext = false
+class MessageFieldGenerator: FieldGeneratorBase, FieldGenerator {
+    private let generatorOptions: GeneratorOptions
+    private let usesHeapStorage: Bool
 
-    for c in s.characters {
-        if c == "_" {
-            capitalizeNext = true
-        } else if capitalizeNext {
-            result.append(String(c).uppercased())
-            capitalizeNext = false
-        } else {
-            result.append(String(c))
-        }
-    }
-    return result;
-}
+    private let hasFieldPresence: Bool
+    private let swiftName: String
+    private let underscoreSwiftName: String
+    private let storedProperty: String
+    private let swiftHasName: String
+    private let swiftClearName: String
+    private let swiftType: String
+    private let swiftStorageType: String
+    private let swiftDefaultValue: String
+    private let traitsType: String
+    private let comments: String
 
-extension Google_Protobuf_FieldDescriptorProto {
+    private var isMap: Bool {return fieldDescriptor.isMap}
+    private var isPacked: Bool { return fieldDescriptor.isPacked }
 
-    var isRepeated: Bool {return label == .repeated}
-    var isMessage: Bool {return type == .message}
-    var isEnum: Bool {return type == .enum}
-    var isGroup: Bool {return type == .group}
-
-    var isPackable: Bool {
-        switch type {
-        case .string,.bytes,.group,.message:
-            return false
-        default:
-            return label == .repeated
-        }
+    // Note: this could still be a map (since those are repeated message fields
+    private var isRepeated: Bool {return fieldDescriptor.label == .repeated}
+    private var isGroupOrMessage: Bool {
+      switch fieldDescriptor.type {
+      case .group, .message:
+        return true
+      default:
+        return false
+      }
     }
 
-    var bareTypeName: String {
-        if typeName.hasPrefix(".") {
-            var t = ""
-            for c in typeName.characters {
-                if c == "." {
-                    t = ""
-                } else {
-                    t.append(c)
-                }
-            }
-            return t
-        } else {
-            return typeName
-        }
-    }
-
-    func getIsMap(context: Context) -> Bool {
-        if type != .message {return false}
-        let m = context.getMessageForPath(path: typeName)!
-        return m.options.mapEntry
-    }
-
-
-    func getProtoTypeName(context: Context) -> String {
-        switch type {
-        case .double: return "Double"
-        case .float: return "Float"
-        case .int64: return "Int64"
-        case .uint64: return "UInt64"
-        case .int32: return "Int32"
-        case .fixed64: return "Fixed64"
-        case .fixed32: return "Fixed32"
-        case .bool: return "Bool"
-        case .string: return "String"
-        case .group: return context.getMessageNameForPath(path: typeName)!
-        case .message: return context.getMessageNameForPath(path: typeName)!
-        case .bytes: return "Bytes"
-        case .uint32: return "UInt32"
-        case .enum: return "Enum"
-        case .sfixed32: return "SFixed32"
-        case .sfixed64: return "SFixed64"
-        case .sint32: return "SInt32"
-        case .sint64: return "SInt64"
-        }
-    }
-
-    func getSwiftBaseType(context: Context) -> String {
-        switch type {
-        case .double: return "Double"
-        case .float: return "Float"
-        case .int64: return "Int64"
-        case .uint64: return "UInt64"
-        case .int32: return "Int32"
-        case .fixed64: return "UInt64"
-        case .fixed32: return "UInt32"
-        case .bool: return "Bool"
-        case .string: return "String"
-        case .group: return context.getMessageNameForPath(path: typeName)!
-        case .message: return context.getMessageNameForPath(path: typeName)!
-        case .bytes: return "Data"
-        case .uint32: return "UInt32"
-        case .enum: return context.getEnumNameForPath(path: typeName)!
-        case .sfixed32: return "Int32"
-        case .sfixed64: return "Int64"
-        case .sint32: return "Int32"
-        case .sint64: return "Int64"
-        }
-    }
-
-    func getSwiftApiType(context: Context, isProto3: Bool) -> String {
-        if getIsMap(context: context) {
-            let m = context.getMessageForPath(path: typeName)!
-            let keyField = m.field[0]
-            let keyType = keyField.getSwiftBaseType(context: context)
-            let valueField = m.field[1]
-            let valueType = valueField.getSwiftBaseType(context: context)
-            return "Dictionary<" + keyType + "," + valueType + ">"
-        }
-        switch label {
-        case .repeated: return "[" + getSwiftBaseType(context: context) + "]"
-        case .required, .optional:
-            return getSwiftBaseType(context: context)
-        }
-    }
-
-    func getSwiftStorageType(context: Context, isProto3: Bool) -> String {
-        if getIsMap(context: context) {
-            let m = context.getMessageForPath(path: typeName)!
-            let keyField = m.field[0]
-            let keyType = keyField.getSwiftBaseType(context: context)
-            let valueField = m.field[1]
-            let valueType = valueField.getSwiftBaseType(context: context)
-            return "Dictionary<" + keyType + "," + valueType + ">"
-        } else if isRepeated {
-            return "[" + getSwiftBaseType(context: context) + "]"
-        } else if isMessage || isGroup {
-            return getSwiftBaseType(context: context) + "?"
-        } else if isProto3 {
-            return getSwiftBaseType(context: context)
-        } else {
-            return getSwiftBaseType(context: context) + "?"
-        }
-    }
-
-    func getSwiftStorageDefaultValue(context: Context, isProto3: Bool) -> String {
-        if getIsMap(context: context) {
-            return "[:]"
-        } else if isRepeated {
-            return "[]"
-        } else if isMessage || isGroup || !isProto3 {
-            return "nil"
-        } else {
-            return getSwiftDefaultValue(context: context, isProto3: isProto3)
-        }
-    }
-
-    func getSwiftDefaultValue(context: Context, isProto3: Bool) -> String {
-        if getIsMap(context: context) {return "[:]"}
-        if isRepeated {return "[]"}
-        if let d = getSwiftProto2DefaultValue(context: context) {
-            return d
-        }
-        switch type {
-        case .bool: return "false"
-        case .string: return "String()"
-        case .bytes: return "SwiftProtobuf.Internal.emptyData"
-        case .group, .message:
-            return context.getMessageNameForPath(path: typeName)! + "()"
-        case .enum:
-            let e = context.enumByProtoName[typeName]!
-            if e.value.count == 0 {
-                return "nil"
-            } else {
-                let defaultCase = e.value[0].name
-                return context.getSwiftNameForEnumCase(path: typeName, caseName: defaultCase)
-            }
-        default: return "0"
-        }
-    }
-
-    func getTraitsType(context: Context) -> String {
-        if getIsMap(context: context) {
-            let m = context.getMessageForPath(path: typeName)!
-            let keyField = m.field[0]
-            let keyTraits = keyField.getTraitsType(context: context)
-            let valueField = m.field[1]
-            let valueTraits = valueField.getTraitsType(context: context)
-            if valueField.isMessage {
-                return "SwiftProtobuf._ProtobufMessageMap<" + keyTraits + "," + valueTraits + ">"
-            } else if valueField.isEnum {
-                return "SwiftProtobuf._ProtobufEnumMap<" + keyTraits + "," + valueTraits + ">"
-            } else {
-                return "SwiftProtobuf._ProtobufMap<" + keyTraits + "," + valueTraits + ">"
-            }
-        }
-        switch type {
-        case .double: return "SwiftProtobuf.ProtobufDouble"
-        case .float: return "SwiftProtobuf.ProtobufFloat"
-        case .int64: return "SwiftProtobuf.ProtobufInt64"
-        case .uint64: return "SwiftProtobuf.ProtobufUInt64"
-        case .int32: return "SwiftProtobuf.ProtobufInt32"
-        case .fixed64: return "SwiftProtobuf.ProtobufFixed64"
-        case .fixed32: return "SwiftProtobuf.ProtobufFixed32"
-        case .bool: return "SwiftProtobuf.ProtobufBool"
-        case .string: return "SwiftProtobuf.ProtobufString"
-        case .group: return getSwiftBaseType(context: context)
-        case .message: return getSwiftBaseType(context: context)
-        case .bytes: return "SwiftProtobuf.ProtobufBytes"
-        case .uint32: return "SwiftProtobuf.ProtobufUInt32"
-        case .enum: return getSwiftBaseType(context: context)
-        case .sfixed32: return "SwiftProtobuf.ProtobufSFixed32"
-        case .sfixed64: return "SwiftProtobuf.ProtobufSFixed64"
-        case .sint32: return "SwiftProtobuf.ProtobufSInt32"
-        case .sint64: return "SwiftProtobuf.ProtobufSInt64"
-        }
-    }
-
-    func getSwiftProto2DefaultValue(context: Context) -> String? {
-        guard hasDefaultValue else {return nil}
-        switch type {
-        case .double:
-           switch defaultValue {
-           case "inf": return "Double.infinity"
-           case "-inf": return "-Double.infinity"
-           case "nan": return "Double.nan"
-           default: return defaultValue
-           }
-        case .float:
-           switch defaultValue {
-           case "inf": return "Float.infinity"
-           case "-inf": return "-Float.infinity"
-           case "nan": return "Float.nan"
-           default: return defaultValue
-           }
-        case .bool: return defaultValue
-        case .string:
-          if defaultValue.isEmpty {
-            // proto file listed the default as "", just pretend it wasn't set since
-            // this is the default.
-            return nil
-          } else {
-            return stringToEscapedStringLiteral(defaultValue)
-          }
-        case .bytes:
-          if defaultValue.isEmpty {
-            // proto file listed the default as "", just pretend it wasn't set since
-            // this is the default.
-            return nil
-          } else {
-            return escapedToDataLiteral(defaultValue)
-          }
-        case .enum:
-            return context.getSwiftNameForEnumCase(path: typeName, caseName: defaultValue)
-        default: return defaultValue
-        }
-    }
-}
-
-struct MessageFieldGenerator {
-    let descriptor: Google_Protobuf_FieldDescriptorProto
-    let oneof: Google_Protobuf_OneofDescriptorProto?
-    let jsonName: String?
-    let swiftName: String
-    let swiftHasName: String
-    let swiftClearName: String
-    let swiftStorageName: String
-    var protoName: String {return descriptor.name}
-    var number: Int {return Int(descriptor.number)}
-    let path: [Int32]
-    let comments: String
-    let isProto3: Bool
-    let context: Context
-    let generatorOptions: GeneratorOptions
-
-    init(descriptor: Google_Protobuf_FieldDescriptorProto,
-        path: [Int32],
-        messageDescriptor: Google_Protobuf_DescriptorProto,
-        file: FileGenerator,
-        context: Context)
+    init(descriptor: FieldDescriptor,
+         generatorOptions: GeneratorOptions,
+         namer: SwiftProtobufNamer,
+         usesHeapStorage: Bool)
     {
-        self.descriptor = descriptor
-        self.jsonName = descriptor.jsonName
-        if descriptor.type == .group {
-            let g = context.getMessageForPath(path: descriptor.typeName)!
-            let lowerName = toLowerCamelCase(g.name)
-            self.swiftName = sanitizeFieldName(lowerName)
-            let sanitizedUpper = sanitizeFieldName(toUpperCamelCase(g.name), basedOn: lowerName)
-            self.swiftHasName = "has" + sanitizedUpper
-            self.swiftClearName = "clear" + sanitizedUpper
+        precondition(descriptor.oneofIndex == nil)
+
+        self.generatorOptions = generatorOptions
+        self.usesHeapStorage = usesHeapStorage
+
+        hasFieldPresence = descriptor.hasFieldPresence
+        let names = namer.messagePropertyNames(field: descriptor,
+                                               prefixed: "_",
+                                               includeHasAndClear: hasFieldPresence)
+        swiftName = names.name
+        underscoreSwiftName = names.prefixed
+        swiftHasName = names.has
+        swiftClearName = names.clear
+        swiftType = descriptor.swiftType(namer: namer)
+        swiftStorageType = descriptor.swiftStorageType(namer: namer)
+        swiftDefaultValue = descriptor.swiftDefaultValue(namer: namer)
+        traitsType = descriptor.traitsType(namer: namer)
+        comments = descriptor.protoSourceComments()
+
+        if usesHeapStorage {
+            storedProperty = "_storage.\(underscoreSwiftName)"
         } else {
-            let lowerName = toLowerCamelCase(descriptor.name)
-            self.swiftName = sanitizeFieldName(lowerName)
-            let sanitizedUpper = sanitizeFieldName(toUpperCamelCase(descriptor.name), basedOn: lowerName)
-            self.swiftHasName = "has" + sanitizedUpper
-            self.swiftClearName = "clear" + sanitizedUpper
+            storedProperty = "self.\(hasFieldPresence ? underscoreSwiftName : swiftName)"
         }
-        if descriptor.hasOneofIndex {
-            self.oneof = messageDescriptor.oneofDecl[Int(descriptor.oneofIndex)]
-        } else {
-            self.oneof = nil
-        }
-        self.swiftStorageName = "_" + self.swiftName
-        self.path = path
-        self.comments = file.commentsFor(path: path)
-        self.isProto3 = file.isProto3
-        self.context = context
-        self.generatorOptions = file.generatorOptions
+
+        super.init(descriptor: descriptor)
     }
 
-    var fieldMapNames: String {
-        // Protobuf Text uses the unqualified group name for the field
-        // name instead of the field name provided by protoc.  As far
-        // as I can tell, no one uses the fieldname provided by protoc,
-        // so let's just put the field name that Protobuf Text
-        // actually uses here.
-        let protoName: String
-        let jsonName: String
-        if isGroup {
-            protoName = descriptor.bareTypeName
+    func generateStorage(printer p: inout CodePrinter) {
+        let defaultValue = hasFieldPresence ? "nil" : swiftDefaultValue
+        if usesHeapStorage {
+            p.print("var \(underscoreSwiftName): \(swiftStorageType) = \(defaultValue)\n")
         } else {
-            protoName = self.protoName
+          // If this field has field presence, the there is a private storage variable.
+          if hasFieldPresence {
+              p.print("fileprivate var \(underscoreSwiftName): \(swiftStorageType) = \(defaultValue)\n")
+          }
         }
-        jsonName = self.jsonName ?? protoName
-        if jsonName == protoName {
-            /// The proto and JSON names are identical:
-            return ".same(proto: \"\(protoName)\")"
+    }
+
+    func generateInterface(printer p: inout CodePrinter) {
+        let visibility = generatorOptions.visibilitySourceSnippet
+
+        p.print("\n", comments)
+
+        if usesHeapStorage {
+            p.print(
+              "\(visibility)var \(swiftName): \(swiftType) {\n")
+            p.indent()
+            let defaultClause = hasFieldPresence ? " ?? \(swiftDefaultValue)" : ""
+            p.print(
+              "get {return _storage.\(underscoreSwiftName)\(defaultClause)}\n",
+              "set {_uniqueStorage().\(underscoreSwiftName) = newValue}\n")
+            p.outdent()
+            p.print("}\n")
         } else {
-            let libraryGeneratedJsonName = toJsonFieldName(protoName)
-            if jsonName == libraryGeneratedJsonName {
-                /// The library will generate the same thing protoc gave, so
-                /// we can let the library recompute this:
-                return ".standard(proto: \"\(protoName)\")"
+            if hasFieldPresence {
+                p.print("\(visibility)var \(swiftName): \(swiftType) {\n")
+                p.indent()
+                p.print(
+                  "get {return \(underscoreSwiftName) ?? \(swiftDefaultValue)}\n",
+                  "set {\(underscoreSwiftName) = newValue}\n")
+                p.outdent()
+                p.print("}\n")
             } else {
-                /// The library's generation didn't match, so specify this explicitly.
-                return ".unique(proto: \"\(protoName)\", json: \"\(jsonName)\")"
+                p.print("\(visibility)var \(swiftName): \(swiftStorageType) = \(swiftDefaultValue)\n")
             }
         }
-    }
 
-    var isGroup: Bool {return descriptor.isGroup}
-    var isMap: Bool {return descriptor.getIsMap(context: context)}
-    var isMessage: Bool {return descriptor.isMessage}
-    var isEnum: Bool {return descriptor.type == .enum}
-    var isString: Bool {return descriptor.type == .string}
-    var isBytes: Bool {return descriptor.type == .bytes}
-    var isPacked: Bool {return descriptor.isPackable &&
-        (descriptor.options.hasPacked ? descriptor.options.packed : isProto3)}
-    var isRepeated: Bool {return descriptor.isRepeated}
+        guard hasFieldPresence else { return }
 
-    // True/False if the field will be hold a Message. If the field is a map,
-    // the value type for the map is checked.
-    var fieldHoldsMessage: Bool {
-        switch descriptor.label {
-        case .required, .optional:
-            let type = descriptor.type
-            return type == .message || type == .group
-        case .repeated:
-            let type = descriptor.type
-            if type == .group { return true }
-            if type == .message {
-                let m = context.getMessageForPath(path: descriptor.typeName)!
-                if m.options.mapEntry {
-                    let valueField = m.field[1]
-                    return valueField.type == .message
-                } else {
-                    return true
-                }
-            } else {
-                return false
-            }
-        }
-    }
-
-    var name: String {return descriptor.name}
-    var protoTypeName: String {return descriptor.getProtoTypeName(context: context)}
-    var swiftBaseType: String {return descriptor.getSwiftBaseType(context: context)}
-    var swiftApiType: String {return descriptor.getSwiftApiType(context: context, isProto3: isProto3)}
-
-    var swiftDefaultValue: String {
-        return descriptor.getSwiftDefaultValue(context: context, isProto3: isProto3)
-    }
-
-    var swiftProto2DefaultValue: String? {
-        return descriptor.getSwiftProto2DefaultValue(context: context)
-    }
-
-    var swiftStorageType: String {
-        return descriptor.getSwiftStorageType(context: context, isProto3: isProto3)
-    }
-
-    var swiftStorageDefaultValue: String {
-        return descriptor.getSwiftStorageDefaultValue(context: context, isProto3: isProto3)
-    }
-
-    var traitsType: String {return descriptor.getTraitsType(context: context)}
-
-    func generateTopIvar(printer p: inout CodePrinter) {
-        p.print("\n")
-        if !comments.isEmpty {
-            p.print(comments)
-        }
-        if let oneof = oneof {
-            p.print("\(generatorOptions.visibilitySourceSnippet)var \(swiftName): \(swiftApiType) {\n")
-            p.indent()
-            p.print("get {\n")
-            p.indent()
-            p.print("if case .\(swiftName)(let v)? = \(oneof.swiftFieldName) {return v}\n")
-            p.print("return \(swiftDefaultValue)\n")
-            p.outdent()
-            p.print("}\n")
-            p.print("set {\(oneof.swiftFieldName) = .\(swiftName)(newValue)}\n")
-            p.outdent()
-            p.print("}\n")
-        } else if !isRepeated && !isMap && !isProto3 {
-            p.print("fileprivate var \(swiftStorageName): \(swiftStorageType) = \(swiftStorageDefaultValue)\n")
-            p.print("\(generatorOptions.visibilitySourceSnippet)var \(swiftName): \(swiftApiType) {\n")
-            p.indent()
-            p.print("get {return \(swiftStorageName) ?? \(swiftDefaultValue)}\n")
-            p.print("set {\(swiftStorageName) = newValue}\n")
-            p.outdent()
-            p.print("}\n")
-        } else {
-            p.print("\(generatorOptions.visibilitySourceSnippet)var \(swiftName): \(swiftStorageType) = \(swiftStorageDefaultValue)\n")
-        }
-    }
-
-    func generateProxyIvar(printer p: inout CodePrinter) {
-        p.print("\n")
-        if !comments.isEmpty {
-            p.print(comments)
-        }
-        p.print("\(generatorOptions.visibilitySourceSnippet)var \(swiftName): \(swiftApiType) {\n")
-        p.indent()
-        if let oneof = oneof {
-            p.print("get {\n")
-            p.indent()
-            p.print("if case .\(swiftName)(let v)? = _storage.\(oneof.swiftStorageFieldName) {return v}\n")
-            p.print("return \(swiftDefaultValue)\n")
-            p.outdent()
-            p.print("}\n")
-            p.print("set {_uniqueStorage().\(oneof.swiftStorageFieldName) = .\(swiftName)(newValue)}\n")
-        } else {
-            let defaultClause: String
-            if isMap || isRepeated {
-                defaultClause = ""
-            } else if isMessage || isGroup {
-                defaultClause = " ?? " + swiftDefaultValue
-            } else if let d = swiftProto2DefaultValue {
-                defaultClause = " ?? " + d
-            } else {
-                defaultClause = isProto3 ? "" : " ?? " + swiftDefaultValue
-            }
-            p.print("get {return _storage.\(swiftStorageName)\(defaultClause)}\n")
-            p.print("set {_uniqueStorage().\(swiftStorageName) = newValue}\n")
-        }
-        p.outdent()
-        p.print("}\n")
-    }
-
-    func generateHasProperty(printer p: inout CodePrinter, usesHeapStorage: Bool) {
-        if isRepeated || isMap || oneof != nil || (isProto3 && !isMessage) {
-            return
-        }
         let storagePrefix = usesHeapStorage ? "_storage." : "self."
-        p.print("\(generatorOptions.visibilitySourceSnippet)var \(swiftHasName): Bool {\n")
-        p.indent()
-        p.print("return \(storagePrefix)\(swiftStorageName) != nil\n")
-        p.outdent()
-        p.print("}\n")
+        p.print(
+            "/// Returns true if `\(swiftName)` has been explicitly set.\n",
+            "\(visibility)var \(swiftHasName): Bool {return \(storagePrefix)\(underscoreSwiftName) != nil}\n")
+
+        p.print(
+            "/// Clears the value of `\(swiftName)`. Subsequent reads from it will return its default value.\n",
+            "\(visibility)mutating func \(swiftClearName)() {\(storagePrefix)\(underscoreSwiftName) = nil}\n")
     }
 
-    func generateClearMethod(printer p: inout CodePrinter, usesHeapStorage: Bool) {
-        if isRepeated || isMap || oneof != nil || (isProto3 && !isMessage) {
-            return
-        }
-        let storagePrefix = usesHeapStorage ? "_storage." : "self."
-        p.print("\(generatorOptions.visibilitySourceSnippet)mutating func \(swiftClearName)() {\n")
-        p.indent()
-        p.print("\(storagePrefix)\(swiftStorageName) = nil\n")
-        p.outdent()
-        p.print("}\n")
+    func generateStorageClassClone(printer p: inout CodePrinter) {
+        p.print("\(underscoreSwiftName) = source.\(underscoreSwiftName)\n")
     }
 
-    func generateDecodeFieldCase(printer p: inout CodePrinter, usesStorage: Bool) {
-        let prefix: String
-        if usesStorage {
-            prefix = "_storage._"
-        } else if !isRepeated && !isMap && !isProto3 {
-            prefix = "self._"
+    func generateFieldComparison(printer p: inout CodePrinter) {
+        let otherStoredProperty: String
+        if usesHeapStorage {
+            otherStoredProperty = "other_storage.\(underscoreSwiftName)"
         } else {
-            prefix = "self."
+            otherStoredProperty = "other.\(hasFieldPresence ? underscoreSwiftName : swiftName)"
         }
 
+        p.print("if \(storedProperty) != \(otherStoredProperty) {return false}\n")
+    }
+
+   func generateRequiredFieldCheck(printer p: inout CodePrinter) {
+       guard fieldDescriptor.label == .required else { return }
+       p.print("if \(storedProperty) == nil {return false}\n")
+    }
+
+    func generateIsInitializedCheck(printer p: inout CodePrinter) {
+        guard isGroupOrMessage && fieldDescriptor.messageType.hasRequiredFields() else { return }
+
+        if isRepeated {  // Map or Array
+            p.print("if !SwiftProtobuf.Internal.areAllInitialized(\(storedProperty)) {return false}\n")
+        } else {
+            p.print("if let v = \(storedProperty), !v.isInitialized {return false}\n")
+        }
+    }
+
+    func generateDecodeFieldCase(printer p: inout CodePrinter) {
         let decoderMethod: String
         let traitsArg: String
-        let valueArg: String
         if isMap {
-            // Map fields
             decoderMethod = "decodeMapField"
-            traitsArg = "fieldType: \(traitsType).self"
-            valueArg = "value: &\(prefix)\(swiftName)"
-        } else if isGroup || isMessage || isEnum {
-            // Message, Group, Enum fields
-            let modifier = (isRepeated ? "Repeated" : "Singular")
-            let special = isGroup ? "Group"
-                         : isMessage ? "Message"
-                         : isEnum ? "Enum"
-                         : ""
-            decoderMethod = "decode\(modifier)\(special)Field"
-            traitsArg = ""
-            valueArg = "value: &\(prefix)\(swiftName)"
+            traitsArg = "fieldType: \(traitsType).self, "
         } else {
-            // Primitive fields
-            let modifier = (isRepeated ? "Repeated" : "Singular")
-            let protoType = descriptor.getProtoTypeName(context: context)
-            decoderMethod = "decode\(modifier)\(protoType)Field"
+            let modifier = isRepeated ? "Repeated" : "Singular"
+            decoderMethod = "decode\(modifier)\(fieldDescriptor.protoGenericType)Field"
             traitsArg = ""
-            valueArg = "value: &\(prefix)\(swiftName)"
         }
-        let separator = traitsArg.isEmpty ? "" : ", "
-        p.print("case \(number): try decoder.\(decoderMethod)(\(traitsArg)\(separator)\(valueArg))\n")
+
+        p.print("case \(number): try decoder.\(decoderMethod)(\(traitsArg)value: &\(storedProperty))\n")
     }
 
-    func generateTraverse(printer p: inout CodePrinter, usesStorage: Bool) {
-        let prefix: String
-        if usesStorage {
-            prefix = "_storage._"
-        } else if !isRepeated && !isMap && !isProto3 {
-            prefix = "self._"
-        } else {
-            prefix = "self."
-        }
-
+    func generateTraverse(printer p: inout CodePrinter) {
         let visitMethod: String
-        let fieldTypeArg: String
+        let traitsArg: String
         if isMap {
             visitMethod = "visitMapField"
-            fieldTypeArg = "fieldType: \(traitsType).self, "
-        } else if isGroup || isMessage || isEnum {
-            let modifier = (isPacked ? "Packed"
-                         : isRepeated ? "Repeated"
-                         : "Singular")
-            let special = isGroup ? "Group"
-                         : isMessage ? "Message"
-                         : isEnum ? "Enum"
-                         : ""
-            visitMethod = "visit\(modifier)\(special)Field"
-            fieldTypeArg = ""
-        } else if !isRepeated && descriptor.type == .int64 {
-            visitMethod = "visitSingularInt64Field"
-            fieldTypeArg = ""
+            traitsArg = "fieldType: \(traitsType).self, "
         } else {
-            let modifier = (isPacked ? "Packed"
-                         : isRepeated ? "Repeated"
-                                      : "Singular")
-            let protoType = descriptor.getProtoTypeName(context: context)
-            visitMethod = "visit\(modifier)\(protoType)Field"
-            fieldTypeArg = ""
+            let modifier = isPacked ? "Packed" : isRepeated ? "Repeated" : "Singular"
+            visitMethod = "visit\(modifier)\(fieldDescriptor.protoGenericType)Field"
+            traitsArg = ""
         }
 
+        let varName = hasFieldPresence ? "v" : storedProperty
 
-        let varName: String
         let conditional: String
-        if isRepeated {
-            varName = prefix + swiftName
+        if isRepeated {  // Also covers maps
             conditional = "!\(varName).isEmpty"
-        } else if isGroup || isMessage || !isProto3 {
-            varName = "v"
-            conditional = "let v = \(prefix)\(swiftName)"
+        } else if hasFieldPresence {
+            conditional = "let v = \(storedProperty)"
         } else {
-            assert(isProto3)
-            varName = prefix + swiftName
-            if isString || isBytes {
+            // At this point, the fields would be a primative type, and should only
+            // be visted if it is the non default value.
+            assert(fieldDescriptor.file.syntax == .proto3)
+            switch fieldDescriptor.type {
+            case .string, .bytes:
                 conditional = ("!\(varName).isEmpty")
-            } else {
+            default:
                 conditional = ("\(varName) != \(swiftDefaultValue)")
             }
         }
 
         p.print("if \(conditional) {\n")
         p.indent()
-        p.print("try visitor.\(visitMethod)(\(fieldTypeArg)value: \(varName), fieldNumber: \(number))\n")
+        p.print("try visitor.\(visitMethod)(\(traitsArg)value: \(varName), fieldNumber: \(number))\n")
         p.outdent()
         p.print("}\n")
     }

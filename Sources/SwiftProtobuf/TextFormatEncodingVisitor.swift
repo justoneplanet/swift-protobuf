@@ -69,7 +69,9 @@ internal struct TextFormatEncodingVisitor: Visitor {
 
   mutating func visitUnknown(bytes: Data) throws {
       try bytes.withUnsafeBytes { (p: UnsafePointer<UInt8>) -> () in
-          var decoder = BinaryDecoder(forReadingFrom: p, count: bytes.count)
+          var decoder = BinaryDecoder(forReadingFrom: p,
+                                      count: bytes.count,
+                                      options: BinaryDecodingOptions())
           try visitUnknown(decoder: &decoder, groupFieldNumber: nil)
       }
   }
@@ -96,13 +98,17 @@ internal struct TextFormatEncodingVisitor: Visitor {
               var bytes = Internal.emptyData
               try decoder.decodeSingularBytesField(value: &bytes)
               bytes.withUnsafeBytes { (p: UnsafePointer<UInt8>) -> () in
-                  var testDecoder = BinaryDecoder(forReadingFrom: p, count: bytes.count)
+                  var testDecoder = BinaryDecoder(forReadingFrom: p,
+                                                  count: bytes.count,
+                                                  parent: decoder)
                   do {
                       // Skip all the fields to test if it looks like a message
                       while let _ = try testDecoder.nextFieldNumber() {
                       }
                       // No error?  Output the message body.
-                      var subDecoder = BinaryDecoder(forReadingFrom: p, count: bytes.count)
+                      var subDecoder = BinaryDecoder(forReadingFrom: p,
+                                                     count: bytes.count,
+                                                     parent: decoder)
                       encoder.startMessageField()
                       try visitUnknown(decoder: &subDecoder, groupFieldNumber: nil)
                       encoder.endMessageField()
@@ -376,7 +382,10 @@ internal struct TextFormatEncodingVisitor: Visitor {
   // fields (including proto3's default use of packed) without
   // introducing the baggage of a separate option.
 
-  private mutating func _visitPacked<T>(value: [T], fieldNumber: Int, encode: (T) -> ()) throws {
+  private mutating func _visitPacked<T>(
+    value: [T], fieldNumber: Int,
+    encode: (T, inout TextFormatEncoder) -> ()
+  ) throws {
       emitFieldName(lookingUp: fieldNumber)
       encoder.startRegularField()
       var firstItem = true
@@ -385,7 +394,7 @@ internal struct TextFormatEncodingVisitor: Visitor {
           if !firstItem {
               encoder.arraySeparator()
           }
-          encode(v)
+          encode(v, &encoder)
           firstItem = false
       }
       encoder.endArray()
@@ -393,37 +402,43 @@ internal struct TextFormatEncodingVisitor: Visitor {
   }
 
   mutating func visitPackedFloatField(value: [Float], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: Float) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: Float, encoder: inout TextFormatEncoder) in
       encoder.putFloatValue(value: v)
     }
   }
 
   mutating func visitPackedDoubleField(value: [Double], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: Double) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: Double, encoder: inout TextFormatEncoder) in
       encoder.putDoubleValue(value: v)
     }
   }
 
   mutating func visitPackedInt32Field(value: [Int32], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: Int32) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: Int32, encoder: inout TextFormatEncoder) in
       encoder.putInt64(value: Int64(v))
     }
   }
 
   mutating func visitPackedInt64Field(value: [Int64], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: Int64) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: Int64, encoder: inout TextFormatEncoder) in
       encoder.putInt64(value: v)
     }
   }
 
   mutating func visitPackedUInt32Field(value: [UInt32], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: UInt32) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: UInt32, encoder: inout TextFormatEncoder) in
       encoder.putUInt64(value: UInt64(v))
     }
   }
 
   mutating func visitPackedUInt64Field(value: [UInt64], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: UInt64) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: UInt64, encoder: inout TextFormatEncoder) in
       encoder.putUInt64(value: v)
     }
   }
@@ -453,13 +468,15 @@ internal struct TextFormatEncodingVisitor: Visitor {
   }
 
   mutating func visitPackedBoolField(value: [Bool], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: Bool) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: Bool, encoder: inout TextFormatEncoder) in
       encoder.putBoolValue(value: v)
     }
   }
 
   mutating func visitPackedEnumField<E: Enum>(value: [E], fieldNumber: Int) throws {
-    try _visitPacked(value: value, fieldNumber: fieldNumber) { (v: E) in
+    try _visitPacked(value: value, fieldNumber: fieldNumber) {
+      (v: E, encoder: inout TextFormatEncoder) in
       encoder.putEnumValue(value: v)
     }
   }
@@ -481,11 +498,11 @@ internal struct TextFormatEncodingVisitor: Visitor {
       }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: MapValueType>(
+  mutating func visitMapField<KeyType, ValueType: MapValueType>(
     fieldType: _ProtobufMap<KeyType, ValueType>.Type,
     value: _ProtobufMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable {
+  ) throws {
       try _visitMap(map: value, fieldNumber: fieldNumber) {
           (visitor: inout TextFormatEncodingVisitor, key, value) throws -> () in
           try KeyType.visitSingular(value: key, fieldNumber: 1, with: &visitor)
@@ -493,11 +510,11 @@ internal struct TextFormatEncodingVisitor: Visitor {
       }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Enum>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
     value: _ProtobufEnumMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable, ValueType.RawValue == Int {
+  ) throws where ValueType.RawValue == Int {
       try _visitMap(map: value, fieldNumber: fieldNumber) {
           (visitor: inout TextFormatEncodingVisitor, key, value) throws -> () in
           try KeyType.visitSingular(value: key, fieldNumber: 1, with: &visitor)
@@ -505,20 +522,15 @@ internal struct TextFormatEncodingVisitor: Visitor {
       }
   }
 
-  mutating func visitMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(
+  mutating func visitMapField<KeyType, ValueType>(
     fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
     value: _ProtobufMessageMap<KeyType, ValueType>.BaseType,
     fieldNumber: Int
-  ) throws where KeyType.BaseType: Hashable {
+  ) throws {
       try _visitMap(map: value, fieldNumber: fieldNumber) {
           (visitor: inout TextFormatEncodingVisitor, key, value) throws -> () in
           try KeyType.visitSingular(value: key, fieldNumber: 1, with: &visitor)
           try visitor.visitSingularMessageField(value: value, fieldNumber: 2)
       }
-  }
-
-  /// Called for each extension range.
-  mutating func visitExtensionFields(fields: ExtensionFieldValueSet, start: Int, end: Int) throws {
-    try fields.traverse(visitor: &self, start: start, end: end)
   }
 }

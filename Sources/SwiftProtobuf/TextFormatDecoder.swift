@@ -149,7 +149,7 @@ internal struct TextFormatDecoder: Decoder {
         if n > Int64(Int32.max) || n < Int64(Int32.min) {
             throw TextFormatDecodingError.malformedNumber
         }
-        value = Int32(truncatingBitPattern: n)
+        value = Int32(extendingOrTruncating: n)
     }
     mutating func decodeSingularInt32Field(value: inout Int32?) throws {
         try scanner.skipRequiredColon()
@@ -157,7 +157,7 @@ internal struct TextFormatDecoder: Decoder {
         if n > Int64(Int32.max) || n < Int64(Int32.min) {
             throw TextFormatDecodingError.malformedNumber
         }
-        value = Int32(truncatingBitPattern: n)
+        value = Int32(extendingOrTruncating: n)
     }
     mutating func decodeRepeatedInt32Field(value: inout [Int32]) throws {
         try scanner.skipRequiredColon()
@@ -176,14 +176,14 @@ internal struct TextFormatDecoder: Decoder {
                 if n > Int64(Int32.max) || n < Int64(Int32.min) {
                     throw TextFormatDecodingError.malformedNumber
                 }
-                value.append(Int32(truncatingBitPattern: n))
+                value.append(Int32(extendingOrTruncating: n))
             }
         } else {
             let n = try scanner.nextSInt()
             if n > Int64(Int32.max) || n < Int64(Int32.min) {
                 throw TextFormatDecodingError.malformedNumber
             }
-            value.append(Int32(truncatingBitPattern: n))
+            value.append(Int32(extendingOrTruncating: n))
         }
     }
     mutating func decodeSingularInt64Field(value: inout Int64) throws {
@@ -221,7 +221,7 @@ internal struct TextFormatDecoder: Decoder {
         if n > UInt64(UInt32.max) {
             throw TextFormatDecodingError.malformedNumber
         }
-        value = UInt32(truncatingBitPattern: n)
+        value = UInt32(extendingOrTruncating: n)
     }
     mutating func decodeSingularUInt32Field(value: inout UInt32?) throws {
         try scanner.skipRequiredColon()
@@ -229,7 +229,7 @@ internal struct TextFormatDecoder: Decoder {
         if n > UInt64(UInt32.max) {
             throw TextFormatDecodingError.malformedNumber
         }
-        value = UInt32(truncatingBitPattern: n)
+        value = UInt32(extendingOrTruncating: n)
     }
     mutating func decodeRepeatedUInt32Field(value: inout [UInt32]) throws {
         try scanner.skipRequiredColon()
@@ -248,14 +248,14 @@ internal struct TextFormatDecoder: Decoder {
                 if n > UInt64(UInt32.max) {
                     throw TextFormatDecodingError.malformedNumber
                 }
-                value.append(UInt32(truncatingBitPattern: n))
+                value.append(UInt32(extendingOrTruncating: n))
             }
         } else {
             let n = try scanner.nextUInt()
             if n > UInt64(UInt32.max) {
                 throw TextFormatDecodingError.malformedNumber
             }
-            value.append(UInt32(truncatingBitPattern: n))
+            value.append(UInt32(extendingOrTruncating: n))
         }
     }
     mutating func decodeSingularUInt64Field(value: inout UInt64) throws {
@@ -431,7 +431,7 @@ internal struct TextFormatDecoder: Decoder {
 
     private mutating func decodeEnum<E: Enum>() throws -> E where E.RawValue == Int {
         if let name = try scanner.nextOptionalEnumName() {
-            if let b = E(name: name) {
+            if let b = E(rawUTF8: name) {
                 return b
             } else {
                 throw TextFormatDecodingError.unrecognizedEnumValue
@@ -439,7 +439,7 @@ internal struct TextFormatDecoder: Decoder {
         }
         let number = try scanner.nextSInt()
         if number >= Int64(Int32.min) && number <= Int64(Int32.max) {
-            let n = Int32(truncatingBitPattern: number)
+            let n = Int32(extendingOrTruncating: number)
             if let e = E(rawValue: Int(n)) {
                 return e
             } else {
@@ -551,7 +551,7 @@ internal struct TextFormatDecoder: Decoder {
         try decodeRepeatedMessageField(value: &value)
     }
 
-    private mutating func decodeMapEntry<KeyType: MapKeyType, ValueType: MapValueType>(mapType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws {
+    private mutating func decodeMapEntry<KeyType, ValueType: MapValueType>(mapType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws {
         var keyField: KeyType.BaseType?
         var valueField: ValueType.BaseType?
         let terminator = try scanner.skipObjectStart()
@@ -566,9 +566,9 @@ internal struct TextFormatDecoder: Decoder {
             }
             if let key = try scanner.nextKey() {
                 switch key {
-                case "key":
+                case "key", "1":
                     try KeyType.decodeSingular(value: &keyField, from: &self)
-                case "value":
+                case "value", "2":
                     try ValueType.decodeSingular(value: &valueField, from: &self)
                 default:
                     throw TextFormatDecodingError.unknownField
@@ -578,7 +578,7 @@ internal struct TextFormatDecoder: Decoder {
         }
     }
 
-    mutating func decodeMapField<KeyType: MapKeyType, ValueType: MapValueType>(fieldType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws {
+    mutating func decodeMapField<KeyType, ValueType: MapValueType>(fieldType: _ProtobufMap<KeyType, ValueType>.Type, value: inout _ProtobufMap<KeyType, ValueType>.BaseType) throws {
         _ = scanner.skipOptionalColon()
         if scanner.skipOptionalBeginArray() {
             var firstItem = true
@@ -598,7 +598,7 @@ internal struct TextFormatDecoder: Decoder {
         }
     }
 
-    private mutating func decodeMapEntry<KeyType: MapKeyType, ValueType: Enum>(mapType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int {
+    private mutating func decodeMapEntry<KeyType, ValueType>(mapType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int {
         var keyField: KeyType.BaseType?
         var valueField: ValueType?
         let terminator = try scanner.skipObjectStart()
@@ -613,9 +613,9 @@ internal struct TextFormatDecoder: Decoder {
             }
             if let key = try scanner.nextKey() {
                 switch key {
-                case "key":
+                case "key", "1":
                     try KeyType.decodeSingular(value: &keyField, from: &self)
-                case "value":
+                case "value", "2":
                     try decodeSingularEnumField(value: &valueField)
                 default:
                     throw TextFormatDecodingError.unknownField
@@ -625,7 +625,7 @@ internal struct TextFormatDecoder: Decoder {
         }
     }
 
-    mutating func decodeMapField<KeyType: MapKeyType, ValueType: Enum>(fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int {
+    mutating func decodeMapField<KeyType, ValueType>(fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type, value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType) throws where ValueType.RawValue == Int {
         _ = scanner.skipOptionalColon()
         if scanner.skipOptionalBeginArray() {
             var firstItem = true
@@ -645,7 +645,7 @@ internal struct TextFormatDecoder: Decoder {
         }
     }
 
-    private mutating func decodeMapEntry<KeyType: MapKeyType, ValueType: Message & Hashable>(mapType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws {
+    private mutating func decodeMapEntry<KeyType, ValueType>(mapType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws {
         var keyField: KeyType.BaseType?
         var valueField: ValueType?
         let terminator = try scanner.skipObjectStart()
@@ -660,9 +660,9 @@ internal struct TextFormatDecoder: Decoder {
             }
             if let key = try scanner.nextKey() {
                 switch key {
-                case "key":
+                case "key", "1":
                     try KeyType.decodeSingular(value: &keyField, from: &self)
-                case "value":
+                case "value", "2":
                     try decodeSingularMessageField(value: &valueField)
                 default:
                     throw TextFormatDecodingError.unknownField
@@ -672,7 +672,7 @@ internal struct TextFormatDecoder: Decoder {
         }
     }
 
-    mutating func decodeMapField<KeyType: MapKeyType, ValueType: Message & Hashable>(fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws {
+    mutating func decodeMapField<KeyType, ValueType>(fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type, value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType) throws {
         _ = scanner.skipOptionalColon()
         if scanner.skipOptionalBeginArray() {
             var firstItem = true
@@ -694,9 +694,20 @@ internal struct TextFormatDecoder: Decoder {
 
     mutating func decodeExtensionField(values: inout ExtensionFieldValueSet, messageType: Message.Type, fieldNumber: Int) throws {
         if let ext = scanner.extensions?[messageType, fieldNumber] {
-            var fieldValue = values[fieldNumber] ?? ext._protobuf_newField()
-            try fieldValue.decodeExtensionField(decoder: &self)
-            values[fieldNumber] = fieldValue
+            var fieldValue = values[fieldNumber]
+            if fieldValue != nil {
+                try fieldValue!.decodeExtensionField(decoder: &self)
+            } else {
+                fieldValue = try ext._protobuf_newField(decoder: &self)
+            }
+            if fieldValue != nil {
+                values[fieldNumber] = fieldValue
+            } else {
+                // Really things should never get here, for TextFormat, decoding
+                // the value should always work or throw an error.  This specific
+                // error result is to allow this to be more detectable.
+                throw TextFormatDecodingError.internalExtensionError
+            }
         }
     }
 }

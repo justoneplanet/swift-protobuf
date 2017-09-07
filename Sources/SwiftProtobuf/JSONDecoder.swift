@@ -16,6 +16,7 @@ import Foundation
 
 internal struct JSONDecoder: Decoder {
   internal var scanner: JSONScanner
+  internal var options: JSONDecodingOptions
   private var fieldCount = 0
   private var isMapKey = false
   private var fieldNameMap: _NameMap?
@@ -24,12 +25,15 @@ internal struct JSONDecoder: Decoder {
     throw JSONDecodingError.conflictingOneOf
   }
 
-  internal init(source: UnsafeBufferPointer<UInt8>) {
-    self.scanner = JSONScanner(source: source)
+  internal init(source: UnsafeBufferPointer<UInt8>, options: JSONDecodingOptions) {
+    self.options = options
+    self.scanner = JSONScanner(source: source, messageDepthLimit: self.options.messageDepthLimit)
   }
 
-  private init(scanner: JSONScanner) {
-    self.scanner = scanner
+  private init(decoder: JSONDecoder) {
+    // The scanner is copied over along with the options.
+    scanner = decoder.scanner
+    options = decoder.options
   }
 
   mutating func nextFieldNumber() throws -> Int? {
@@ -123,7 +127,7 @@ internal struct JSONDecoder: Decoder {
     if n > Int64(Int32.max) || n < Int64(Int32.min) {
       throw JSONDecodingError.numberRange
     }
-    value = Int32(truncatingBitPattern: n)
+    value = Int32(extendingOrTruncating: n)
   }
 
   mutating func decodeSingularInt32Field(value: inout Int32?) throws {
@@ -135,7 +139,7 @@ internal struct JSONDecoder: Decoder {
     if n > Int64(Int32.max) || n < Int64(Int32.min) {
       throw JSONDecodingError.numberRange
     }
-    value = Int32(truncatingBitPattern: n)
+    value = Int32(extendingOrTruncating: n)
   }
 
   mutating func decodeRepeatedInt32Field(value: inout [Int32]) throws {
@@ -151,7 +155,7 @@ internal struct JSONDecoder: Decoder {
       if n > Int64(Int32.max) || n < Int64(Int32.min) {
         throw JSONDecodingError.numberRange
       }
-      value.append(Int32(truncatingBitPattern: n))
+      value.append(Int32(extendingOrTruncating: n))
       if scanner.skipOptionalArrayEnd() {
         return
       }
@@ -202,7 +206,7 @@ internal struct JSONDecoder: Decoder {
     if n > UInt64(UInt32.max) {
       throw JSONDecodingError.numberRange
     }
-    value = UInt32(truncatingBitPattern: n)
+    value = UInt32(extendingOrTruncating: n)
   }
 
   mutating func decodeSingularUInt32Field(value: inout UInt32?) throws {
@@ -214,7 +218,7 @@ internal struct JSONDecoder: Decoder {
     if n > UInt64(UInt32.max) {
       throw JSONDecodingError.numberRange
     }
-    value = UInt32(truncatingBitPattern: n)
+    value = UInt32(extendingOrTruncating: n)
   }
 
   mutating func decodeRepeatedUInt32Field(value: inout [UInt32]) throws {
@@ -230,7 +234,7 @@ internal struct JSONDecoder: Decoder {
       if n > UInt64(UInt32.max) {
         throw JSONDecodingError.numberRange
       }
-      value.append(UInt32(truncatingBitPattern: n))
+      value.append(UInt32(extendingOrTruncating: n))
       if scanner.skipOptionalArrayEnd() {
         return
       }
@@ -454,25 +458,13 @@ internal struct JSONDecoder: Decoder {
     }
   }
 
-
   mutating func decodeSingularEnumField<E: Enum>(value: inout E?) throws
   where E.RawValue == Int {
     if scanner.skipOptionalNull() {
       value = nil
       return
-    } else if let name = try scanner.nextOptionalQuotedString() {
-      if let v = E(name: name) {
-        value = v
-        return
-      }
-    } else {
-      let n = try scanner.nextSInt()
-      if let i = Int(exactly: n) {
-        value = E(rawValue: i)
-        return
-      }
     }
-    throw JSONDecodingError.unrecognizedEnumValue
+    value = try scanner.nextEnumValue() as E
   }
 
   mutating func decodeSingularEnumField<E: Enum>(value: inout E) throws
@@ -480,21 +472,8 @@ internal struct JSONDecoder: Decoder {
     if scanner.skipOptionalNull() {
       value = E()
       return
-    } else if let name = try scanner.nextOptionalQuotedString() {
-      if let v = E(name: name) {
-        value = v
-        return
-      }
-    } else {
-      let n = try scanner.nextSInt()
-      if let i = Int(exactly: n) {
-        if let v = E(rawValue: i) {
-          value = v
-          return
-        }
-      }
     }
-    throw JSONDecodingError.unrecognizedEnumValue
+    value = try scanner.nextEnumValue()
   }
 
   mutating func decodeRepeatedEnumField<E: Enum>(value: inout [E]) throws
@@ -507,24 +486,8 @@ internal struct JSONDecoder: Decoder {
       return
     }
     while true {
-      if let name = try scanner.nextOptionalQuotedString() {
-        if let v = E(name: name) {
-          value.append(v)
-        } else {
-          throw JSONDecodingError.unrecognizedEnumValue
-        }
-      } else {
-        let n = try scanner.nextSInt()
-        if let i = Int(exactly: n) {
-          if let v = E(rawValue: i) {
-            value.append(v)
-          } else {
-            throw JSONDecodingError.unrecognizedEnumValue
-          }
-        } else {
-          throw JSONDecodingError.numberRange
-        }
-      }
+      let e: E = try scanner.nextEnumValue()
+      value.append(e)
       if scanner.skipOptionalArrayEnd() {
         return
       }
@@ -564,8 +527,9 @@ internal struct JSONDecoder: Decoder {
     if value == nil {
       value = M()
     }
-    var subDecoder = JSONDecoder(scanner: scanner)
+    var subDecoder = JSONDecoder(decoder: self)
     try subDecoder.decodeFullObject(message: &value!)
+    assert(scanner.recursionBudget == subDecoder.scanner.recursionBudget)
     scanner = subDecoder.scanner
   }
 
@@ -594,10 +558,10 @@ internal struct JSONDecoder: Decoder {
         }
       } else {
         var message = M()
-        var subDecoder = JSONDecoder(scanner: scanner)
+        var subDecoder = JSONDecoder(decoder: self)
         try subDecoder.decodeFullObject(message: &message)
-        scanner = subDecoder.scanner
         value.append(message)
+        assert(scanner.recursionBudget == subDecoder.scanner.recursionBudget)
         scanner = subDecoder.scanner
       }
       if scanner.skipOptionalArrayEnd() {
@@ -615,7 +579,7 @@ internal struct JSONDecoder: Decoder {
     throw JSONDecodingError.schemaMismatch
   }
 
-  mutating func decodeMapField<KeyType: MapKeyType, ValueType: MapValueType>(
+  mutating func decodeMapField<KeyType, ValueType: MapValueType>(
     fieldType: _ProtobufMap<KeyType, ValueType>.Type,
     value: inout _ProtobufMap<KeyType, ValueType>.BaseType
   ) throws {
@@ -652,7 +616,7 @@ internal struct JSONDecoder: Decoder {
     }
   }
 
-  mutating func decodeMapField<KeyType: MapKeyType, ValueType: Enum>(
+  mutating func decodeMapField<KeyType, ValueType>(
     fieldType: _ProtobufEnumMap<KeyType, ValueType>.Type,
     value: inout _ProtobufEnumMap<KeyType, ValueType>.BaseType
   ) throws where ValueType.RawValue == Int {
@@ -689,10 +653,7 @@ internal struct JSONDecoder: Decoder {
     }
   }
 
-  mutating func decodeMapField<
-    KeyType: MapKeyType,
-    ValueType: Message & Hashable
-  >(
+  mutating func decodeMapField<KeyType, ValueType>(
     fieldType: _ProtobufMessageMap<KeyType, ValueType>.Type,
     value: inout _ProtobufMessageMap<KeyType, ValueType>.BaseType
   ) throws {
