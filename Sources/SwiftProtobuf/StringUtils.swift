@@ -91,7 +91,7 @@ internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String? {
 //
 //////////////////////////////////
 
-internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String? {
+internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String {
   if count == 0 {
     return String()
   }
