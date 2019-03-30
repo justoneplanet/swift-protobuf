@@ -56,8 +56,10 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-struct ProtobufUnittest_TestMessageSetContainer: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".TestMessageSetContainer"
+struct ProtobufUnittest_TestMessageSetContainer {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var messageSet: Proto2WireformatUnittest_TestMessageSet {
     get {return _storage._messageSet ?? Proto2WireformatUnittest_TestMessageSet()}
@@ -66,96 +68,58 @@ struct ProtobufUnittest_TestMessageSetContainer: SwiftProtobuf.Message {
   /// Returns true if `messageSet` has been explicitly set.
   var hasMessageSet: Bool {return _storage._messageSet != nil}
   /// Clears the value of `messageSet`. Subsequent reads from it will return its default value.
-  mutating func clearMessageSet() {_storage._messageSet = nil}
+  mutating func clearMessageSet() {_uniqueStorage()._messageSet = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  public var isInitialized: Bool {
-    return withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._messageSet, !v.isInitialized {return false}
-      return true
-    }
-  }
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularMessageField(value: &_storage._messageSet)
-        default: break
-        }
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._messageSet {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
 
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-struct ProtobufUnittest_TestMessageSetExtension1: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".TestMessageSetExtension1"
+struct ProtobufUnittest_TestMessageSetExtension1 {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var i: Int32 {
-    get {return _i ?? 0}
-    set {_i = newValue}
+    get {return _storage._i ?? 0}
+    set {_uniqueStorage()._i = newValue}
   }
   /// Returns true if `i` has been explicitly set.
-  var hasI: Bool {return self._i != nil}
+  var hasI: Bool {return _storage._i != nil}
   /// Clears the value of `i`. Subsequent reads from it will return its default value.
-  mutating func clearI() {self._i = nil}
+  mutating func clearI() {_uniqueStorage()._i = nil}
+
+  var recursive: Proto2WireformatUnittest_TestMessageSet {
+    get {return _storage._recursive ?? Proto2WireformatUnittest_TestMessageSet()}
+    set {_uniqueStorage()._recursive = newValue}
+  }
+  /// Returns true if `recursive` has been explicitly set.
+  var hasRecursive: Bool {return _storage._recursive != nil}
+  /// Clears the value of `recursive`. Subsequent reads from it will return its default value.
+  mutating func clearRecursive() {_uniqueStorage()._recursive = nil}
+
+  var testAliasing: String {
+    get {return _storage._testAliasing ?? String()}
+    set {_uniqueStorage()._testAliasing = newValue}
+  }
+  /// Returns true if `testAliasing` has been explicitly set.
+  var hasTestAliasing: Bool {return _storage._testAliasing != nil}
+  /// Clears the value of `testAliasing`. Subsequent reads from it will return its default value.
+  mutating func clearTestAliasing() {_uniqueStorage()._testAliasing = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 15: try decoder.decodeSingularInt32Field(value: &self._i)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._i {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 15)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  fileprivate var _i: Int32? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-struct ProtobufUnittest_TestMessageSetExtension2: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".TestMessageSetExtension2"
+struct ProtobufUnittest_TestMessageSetExtension2 {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var str: String {
     get {return _str ?? String()}
@@ -170,43 +134,23 @@ struct ProtobufUnittest_TestMessageSetExtension2: SwiftProtobuf.Message {
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 25: try decoder.decodeSingularStringField(value: &self._str)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._str {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 25)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _str: String? = nil
 }
 
 /// MessageSet wire format is equivalent to this.
-struct ProtobufUnittest_RawMessageSet: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".RawMessageSet"
+struct ProtobufUnittest_RawMessageSet {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var item: [ProtobufUnittest_RawMessageSet.Item] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  struct Item: SwiftProtobuf.Message {
-    static let protoMessageName: String = ProtobufUnittest_RawMessageSet.protoMessageName + ".Item"
+  struct Item {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
 
     var typeID: Int32 {
       get {return _typeID ?? 0}
@@ -230,74 +174,11 @@ struct ProtobufUnittest_RawMessageSet: SwiftProtobuf.Message {
 
     init() {}
 
-    public var isInitialized: Bool {
-      if self._typeID == nil {return false}
-      if self._message == nil {return false}
-      return true
-    }
-
-    /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-    /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-    /// initializers are defined in the SwiftProtobuf library. See the Message and
-    /// Message+*Additions` files.
-    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 2: try decoder.decodeSingularInt32Field(value: &self._typeID)
-        case 3: try decoder.decodeSingularBytesField(value: &self._message)
-        default: break
-        }
-      }
-    }
-
-    /// Used by the encoding methods of the SwiftProtobuf library, not generally
-    /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-    /// other serializer methods are defined in the SwiftProtobuf library. See the
-    /// `Message` and `Message+*Additions` files.
-    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-      if let v = self._typeID {
-        try visitor.visitSingularInt32Field(value: v, fieldNumber: 2)
-      }
-      if let v = self._message {
-        try visitor.visitSingularBytesField(value: v, fieldNumber: 3)
-      }
-      try unknownFields.traverse(visitor: &visitor)
-    }
-
     fileprivate var _typeID: Int32? = nil
     fileprivate var _message: Data? = nil
   }
 
   init() {}
-
-  public var isInitialized: Bool {
-    if !SwiftProtobuf.Internal.areAllInitialized(self.item) {return false}
-    return true
-  }
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeRepeatedGroupField(value: &self.item)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.item.isEmpty {
-      try visitor.visitRepeatedGroupField(value: self.item, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
 }
 
 // MARK: - Extension support defined in unittest_mset.proto.
@@ -367,7 +248,8 @@ extension ProtobufUnittest_TestMessageSetExtension2 {
 
 fileprivate let _protobuf_package = "protobuf_unittest"
 
-extension ProtobufUnittest_TestMessageSetContainer: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittest_TestMessageSetContainer: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TestMessageSetContainer"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "message_set"),
   ]
@@ -391,67 +273,233 @@ extension ProtobufUnittest_TestMessageSetContainer: SwiftProtobuf._MessageImplem
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittest_TestMessageSetContainer) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  public var isInitialized: Bool {
+    return withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._messageSet, !v.isInitialized {return false}
+      return true
+    }
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularMessageField(value: &_storage._messageSet)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._messageSet {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittest_TestMessageSetContainer, rhs: ProtobufUnittest_TestMessageSetContainer) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._messageSet != other_storage._messageSet {return false}
+        let rhs_storage = _args.1
+        if _storage._messageSet != rhs_storage._messageSet {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension ProtobufUnittest_TestMessageSetExtension1: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittest_TestMessageSetExtension1: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TestMessageSetExtension1"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     15: .same(proto: "i"),
+    16: .same(proto: "recursive"),
+    17: .standard(proto: "test_aliasing"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittest_TestMessageSetExtension1) -> Bool {
-    if self._i != other._i {return false}
-    if unknownFields != other.unknownFields {return false}
+  fileprivate class _StorageClass {
+    var _i: Int32? = nil
+    var _recursive: Proto2WireformatUnittest_TestMessageSet? = nil
+    var _testAliasing: String? = nil
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _i = source._i
+      _recursive = source._recursive
+      _testAliasing = source._testAliasing
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public var isInitialized: Bool {
+    return withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._recursive, !v.isInitialized {return false}
+      return true
+    }
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 15: try decoder.decodeSingularInt32Field(value: &_storage._i)
+        case 16: try decoder.decodeSingularMessageField(value: &_storage._recursive)
+        case 17: try decoder.decodeSingularStringField(value: &_storage._testAliasing)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._i {
+        try visitor.visitSingularInt32Field(value: v, fieldNumber: 15)
+      }
+      if let v = _storage._recursive {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+      }
+      if let v = _storage._testAliasing {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 17)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittest_TestMessageSetExtension1, rhs: ProtobufUnittest_TestMessageSetExtension1) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._i != rhs_storage._i {return false}
+        if _storage._recursive != rhs_storage._recursive {return false}
+        if _storage._testAliasing != rhs_storage._testAliasing {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension ProtobufUnittest_TestMessageSetExtension2: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittest_TestMessageSetExtension2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TestMessageSetExtension2"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     25: .same(proto: "str"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittest_TestMessageSetExtension2) -> Bool {
-    if self._str != other._str {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 25: try decoder.decodeSingularStringField(value: &self._str)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._str {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 25)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittest_TestMessageSetExtension2, rhs: ProtobufUnittest_TestMessageSetExtension2) -> Bool {
+    if lhs._str != rhs._str {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension ProtobufUnittest_RawMessageSet: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittest_RawMessageSet: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".RawMessageSet"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .unique(proto: "Item", json: "item"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittest_RawMessageSet) -> Bool {
-    if self.item != other.item {return false}
-    if unknownFields != other.unknownFields {return false}
+  public var isInitialized: Bool {
+    if !SwiftProtobuf.Internal.areAllInitialized(self.item) {return false}
+    return true
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeRepeatedGroupField(value: &self.item)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.item.isEmpty {
+      try visitor.visitRepeatedGroupField(value: self.item, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittest_RawMessageSet, rhs: ProtobufUnittest_RawMessageSet) -> Bool {
+    if lhs.item != rhs.item {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension ProtobufUnittest_RawMessageSet.Item: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittest_RawMessageSet.Item: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = ProtobufUnittest_RawMessageSet.protoMessageName + ".Item"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     2: .standard(proto: "type_id"),
     3: .same(proto: "message"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittest_RawMessageSet.Item) -> Bool {
-    if self._typeID != other._typeID {return false}
-    if self._message != other._message {return false}
-    if unknownFields != other.unknownFields {return false}
+  public var isInitialized: Bool {
+    if self._typeID == nil {return false}
+    if self._message == nil {return false}
+    return true
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 2: try decoder.decodeSingularInt32Field(value: &self._typeID)
+      case 3: try decoder.decodeSingularBytesField(value: &self._message)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._typeID {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 2)
+    }
+    if let v = self._message {
+      try visitor.visitSingularBytesField(value: v, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittest_RawMessageSet.Item, rhs: ProtobufUnittest_RawMessageSet.Item) -> Bool {
+    if lhs._typeID != rhs._typeID {return false}
+    if lhs._message != rhs._message {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }

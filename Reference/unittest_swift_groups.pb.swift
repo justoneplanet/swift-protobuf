@@ -50,8 +50,10 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 }
 
 /// Same field number appears inside and outside of the group.
-struct SwiftTestGroupExtensions: SwiftProtobuf.Message, SwiftProtobuf.ExtensibleMessage {
-  static let protoMessageName: String = "SwiftTestGroupExtensions"
+struct SwiftTestGroupExtensions: SwiftProtobuf.ExtensibleMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var a: Int32 {
     get {return _a ?? 0}
@@ -65,45 +67,15 @@ struct SwiftTestGroupExtensions: SwiftProtobuf.Message, SwiftProtobuf.Extensible
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  public var isInitialized: Bool {
-    if !_protobuf_extensionFieldValues.isInitialized {return false}
-    return true
-  }
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
-      case 2..<11:
-        try decoder.decodeExtensionField(values: &_protobuf_extensionFieldValues, messageType: SwiftTestGroupExtensions.self, fieldNumber: fieldNumber)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._a {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-    }
-    try visitor.visitExtensionFields(fields: _protobuf_extensionFieldValues, start: 2, end: 11)
-    try unknownFields.traverse(visitor: &visitor)
-  }
 
   var _protobuf_extensionFieldValues = SwiftProtobuf.ExtensionFieldValueSet()
   fileprivate var _a: Int32? = nil
 }
 
-struct ExtensionGroup: SwiftProtobuf.Message {
-  static let protoMessageName: String = "ExtensionGroup"
+struct ExtensionGroup {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var a: Int32 {
     get {return _a ?? 0}
@@ -118,35 +90,13 @@ struct ExtensionGroup: SwiftProtobuf.Message {
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._a {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _a: Int32? = nil
 }
 
-struct RepeatedExtensionGroup: SwiftProtobuf.Message {
-  static let protoMessageName: String = "RepeatedExtensionGroup"
+struct RepeatedExtensionGroup {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var a: Int32 {
     get {return _a ?? 0}
@@ -161,35 +111,13 @@ struct RepeatedExtensionGroup: SwiftProtobuf.Message {
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._a {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _a: Int32? = nil
 }
 
-struct SwiftTestGroupUnextended: SwiftProtobuf.Message {
-  static let protoMessageName: String = "SwiftTestGroupUnextended"
+struct SwiftTestGroupUnextended {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var a: Int32 {
     get {return _a ?? 0}
@@ -204,35 +132,13 @@ struct SwiftTestGroupUnextended: SwiftProtobuf.Message {
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._a {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _a: Int32? = nil
 }
 
-struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
-  static let protoMessageName: String = "SwiftTestNestingGroupsMessage"
+struct SwiftTestNestingGroupsMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var outerA: Int32 {
     get {return _storage._outerA ?? 0}
@@ -241,7 +147,7 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
   /// Returns true if `outerA` has been explicitly set.
   var hasOuterA: Bool {return _storage._outerA != nil}
   /// Clears the value of `outerA`. Subsequent reads from it will return its default value.
-  mutating func clearOuterA() {_storage._outerA = nil}
+  mutating func clearOuterA() {_uniqueStorage()._outerA = nil}
 
   var subGroup1: SwiftTestNestingGroupsMessage.SubGroup1 {
     get {return _storage._subGroup1 ?? SwiftTestNestingGroupsMessage.SubGroup1()}
@@ -250,7 +156,7 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
   /// Returns true if `subGroup1` has been explicitly set.
   var hasSubGroup1: Bool {return _storage._subGroup1 != nil}
   /// Clears the value of `subGroup1`. Subsequent reads from it will return its default value.
-  mutating func clearSubGroup1() {_storage._subGroup1 = nil}
+  mutating func clearSubGroup1() {_uniqueStorage()._subGroup1 = nil}
 
   var subGroup3: [SwiftTestNestingGroupsMessage.SubGroup3] {
     get {return _storage._subGroup3}
@@ -259,8 +165,10 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  struct SubGroup1: SwiftProtobuf.Message {
-    static let protoMessageName: String = SwiftTestNestingGroupsMessage.protoMessageName + ".SubGroup1"
+  struct SubGroup1 {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
 
     var sub1A: Int32 {
       get {return _storage._sub1A ?? 0}
@@ -269,7 +177,7 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
     /// Returns true if `sub1A` has been explicitly set.
     var hasSub1A: Bool {return _storage._sub1A != nil}
     /// Clears the value of `sub1A`. Subsequent reads from it will return its default value.
-    mutating func clearSub1A() {_storage._sub1A = nil}
+    mutating func clearSub1A() {_uniqueStorage()._sub1A = nil}
 
     var subGroup2: SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2 {
       get {return _storage._subGroup2 ?? SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2()}
@@ -278,12 +186,14 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
     /// Returns true if `subGroup2` has been explicitly set.
     var hasSubGroup2: Bool {return _storage._subGroup2 != nil}
     /// Clears the value of `subGroup2`. Subsequent reads from it will return its default value.
-    mutating func clearSubGroup2() {_storage._subGroup2 = nil}
+    mutating func clearSubGroup2() {_uniqueStorage()._subGroup2 = nil}
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
-    struct SubGroup2: SwiftProtobuf.Message {
-      static let protoMessageName: String = SwiftTestNestingGroupsMessage.SubGroup1.protoMessageName + ".SubGroup2"
+    struct SubGroup2 {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
 
       var sub2A: Int32 {
         get {return _sub2A ?? 0}
@@ -298,73 +208,18 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
 
       init() {}
 
-      /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-      /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-      /// initializers are defined in the SwiftProtobuf library. See the Message and
-      /// Message+*Additions` files.
-      mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-        while let fieldNumber = try decoder.nextFieldNumber() {
-          switch fieldNumber {
-          case 1: try decoder.decodeSingularInt32Field(value: &self._sub2A)
-          default: break
-          }
-        }
-      }
-
-      /// Used by the encoding methods of the SwiftProtobuf library, not generally
-      /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-      /// other serializer methods are defined in the SwiftProtobuf library. See the
-      /// `Message` and `Message+*Additions` files.
-      func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-        if let v = self._sub2A {
-          try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-        }
-        try unknownFields.traverse(visitor: &visitor)
-      }
-
       fileprivate var _sub2A: Int32? = nil
     }
 
     init() {}
 
-    /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-    /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-    /// initializers are defined in the SwiftProtobuf library. See the Message and
-    /// Message+*Additions` files.
-    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-      _ = _uniqueStorage()
-      try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-        while let fieldNumber = try decoder.nextFieldNumber() {
-          switch fieldNumber {
-          case 1: try decoder.decodeSingularInt32Field(value: &_storage._sub1A)
-          case 2: try decoder.decodeSingularGroupField(value: &_storage._subGroup2)
-          default: break
-          }
-        }
-      }
-    }
-
-    /// Used by the encoding methods of the SwiftProtobuf library, not generally
-    /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-    /// other serializer methods are defined in the SwiftProtobuf library. See the
-    /// `Message` and `Message+*Additions` files.
-    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-      try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-        if let v = _storage._sub1A {
-          try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-        }
-        if let v = _storage._subGroup2 {
-          try visitor.visitSingularGroupField(value: v, fieldNumber: 2)
-        }
-      }
-      try unknownFields.traverse(visitor: &visitor)
-    }
-
     fileprivate var _storage = _StorageClass.defaultInstance
   }
 
-  struct SubGroup3: SwiftProtobuf.Message {
-    static let protoMessageName: String = SwiftTestNestingGroupsMessage.protoMessageName + ".SubGroup3"
+  struct SubGroup3 {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
 
     var sub3A: Int32 {
       get {return _sub3A ?? 0}
@@ -379,8 +234,10 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
-    struct SubGroup4: SwiftProtobuf.Message {
-      static let protoMessageName: String = SwiftTestNestingGroupsMessage.SubGroup3.protoMessageName + ".SubGroup4"
+    struct SubGroup4 {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
 
       var sub4A: Int32 {
         get {return _sub4A ?? 0}
@@ -395,104 +252,15 @@ struct SwiftTestNestingGroupsMessage: SwiftProtobuf.Message {
 
       init() {}
 
-      /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-      /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-      /// initializers are defined in the SwiftProtobuf library. See the Message and
-      /// Message+*Additions` files.
-      mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-        while let fieldNumber = try decoder.nextFieldNumber() {
-          switch fieldNumber {
-          case 1: try decoder.decodeSingularInt32Field(value: &self._sub4A)
-          default: break
-          }
-        }
-      }
-
-      /// Used by the encoding methods of the SwiftProtobuf library, not generally
-      /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-      /// other serializer methods are defined in the SwiftProtobuf library. See the
-      /// `Message` and `Message+*Additions` files.
-      func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-        if let v = self._sub4A {
-          try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-        }
-        try unknownFields.traverse(visitor: &visitor)
-      }
-
       fileprivate var _sub4A: Int32? = nil
     }
 
     init() {}
 
-    /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-    /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-    /// initializers are defined in the SwiftProtobuf library. See the Message and
-    /// Message+*Additions` files.
-    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularInt32Field(value: &self._sub3A)
-        case 2: try decoder.decodeRepeatedGroupField(value: &self.subGroup4)
-        default: break
-        }
-      }
-    }
-
-    /// Used by the encoding methods of the SwiftProtobuf library, not generally
-    /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-    /// other serializer methods are defined in the SwiftProtobuf library. See the
-    /// `Message` and `Message+*Additions` files.
-    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-      if let v = self._sub3A {
-        try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-      }
-      if !self.subGroup4.isEmpty {
-        try visitor.visitRepeatedGroupField(value: self.subGroup4, fieldNumber: 2)
-      }
-      try unknownFields.traverse(visitor: &visitor)
-    }
-
     fileprivate var _sub3A: Int32? = nil
   }
 
   init() {}
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularInt32Field(value: &_storage._outerA)
-        case 2: try decoder.decodeSingularGroupField(value: &_storage._subGroup1)
-        case 3: try decoder.decodeRepeatedGroupField(value: &_storage._subGroup3)
-        default: break
-        }
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._outerA {
-        try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-      }
-      if let v = _storage._subGroup1 {
-        try visitor.visitSingularGroupField(value: v, fieldNumber: 2)
-      }
-      if !_storage._subGroup3.isEmpty {
-        try visitor.visitRepeatedGroupField(value: _storage._subGroup3, fieldNumber: 3)
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
 
   fileprivate var _storage = _StorageClass.defaultInstance
 }
@@ -554,56 +322,133 @@ let Extensions_RepeatedExtensionGroup = SwiftProtobuf.MessageExtension<SwiftProt
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-extension SwiftTestGroupExtensions: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestGroupExtensions: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "SwiftTestGroupExtensions"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "a"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestGroupExtensions) -> Bool {
-    if self._a != other._a {return false}
-    if unknownFields != other.unknownFields {return false}
-    if _protobuf_extensionFieldValues != other._protobuf_extensionFieldValues {return false}
+  public var isInitialized: Bool {
+    if !_protobuf_extensionFieldValues.isInitialized {return false}
+    return true
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
+      case 2..<11:
+        try decoder.decodeExtensionField(values: &_protobuf_extensionFieldValues, messageType: SwiftTestGroupExtensions.self, fieldNumber: fieldNumber)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._a {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try visitor.visitExtensionFields(fields: _protobuf_extensionFieldValues, start: 2, end: 11)
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestGroupExtensions, rhs: SwiftTestGroupExtensions) -> Bool {
+    if lhs._a != rhs._a {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    if lhs._protobuf_extensionFieldValues != rhs._protobuf_extensionFieldValues {return false}
     return true
   }
 }
 
-extension ExtensionGroup: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ExtensionGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "ExtensionGroup"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "a"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: ExtensionGroup) -> Bool {
-    if self._a != other._a {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._a {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ExtensionGroup, rhs: ExtensionGroup) -> Bool {
+    if lhs._a != rhs._a {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension RepeatedExtensionGroup: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension RepeatedExtensionGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "RepeatedExtensionGroup"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "a"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: RepeatedExtensionGroup) -> Bool {
-    if self._a != other._a {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._a {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: RepeatedExtensionGroup, rhs: RepeatedExtensionGroup) -> Bool {
+    if lhs._a != rhs._a {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SwiftTestGroupUnextended: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestGroupUnextended: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "SwiftTestGroupUnextended"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "a"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestGroupUnextended) -> Bool {
-    if self._a != other._a {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._a)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._a {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestGroupUnextended, rhs: SwiftTestGroupUnextended) -> Bool {
+    if lhs._a != rhs._a {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SwiftTestNestingGroupsMessage: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestNestingGroupsMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = "SwiftTestNestingGroupsMessage"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "outer_a"),
     2: .unique(proto: "SubGroup1", json: "subgroup1"),
@@ -633,24 +478,54 @@ extension SwiftTestNestingGroupsMessage: SwiftProtobuf._MessageImplementationBas
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestNestingGroupsMessage) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularInt32Field(value: &_storage._outerA)
+        case 2: try decoder.decodeSingularGroupField(value: &_storage._subGroup1)
+        case 3: try decoder.decodeRepeatedGroupField(value: &_storage._subGroup3)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._outerA {
+        try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+      }
+      if let v = _storage._subGroup1 {
+        try visitor.visitSingularGroupField(value: v, fieldNumber: 2)
+      }
+      if !_storage._subGroup3.isEmpty {
+        try visitor.visitRepeatedGroupField(value: _storage._subGroup3, fieldNumber: 3)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestNestingGroupsMessage, rhs: SwiftTestNestingGroupsMessage) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._outerA != other_storage._outerA {return false}
-        if _storage._subGroup1 != other_storage._subGroup1 {return false}
-        if _storage._subGroup3 != other_storage._subGroup3 {return false}
+        let rhs_storage = _args.1
+        if _storage._outerA != rhs_storage._outerA {return false}
+        if _storage._subGroup1 != rhs_storage._subGroup1 {return false}
+        if _storage._subGroup3 != rhs_storage._subGroup3 {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SwiftTestNestingGroupsMessage.SubGroup1: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestNestingGroupsMessage.SubGroup1: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = SwiftTestNestingGroupsMessage.protoMessageName + ".SubGroup1"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "sub1_a"),
     2: .unique(proto: "SubGroup2", json: "subgroup2"),
@@ -677,56 +552,136 @@ extension SwiftTestNestingGroupsMessage.SubGroup1: SwiftProtobuf._MessageImpleme
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestNestingGroupsMessage.SubGroup1) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularInt32Field(value: &_storage._sub1A)
+        case 2: try decoder.decodeSingularGroupField(value: &_storage._subGroup2)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._sub1A {
+        try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+      }
+      if let v = _storage._subGroup2 {
+        try visitor.visitSingularGroupField(value: v, fieldNumber: 2)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestNestingGroupsMessage.SubGroup1, rhs: SwiftTestNestingGroupsMessage.SubGroup1) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._sub1A != other_storage._sub1A {return false}
-        if _storage._subGroup2 != other_storage._subGroup2 {return false}
+        let rhs_storage = _args.1
+        if _storage._sub1A != rhs_storage._sub1A {return false}
+        if _storage._subGroup2 != rhs_storage._subGroup2 {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = SwiftTestNestingGroupsMessage.SubGroup1.protoMessageName + ".SubGroup2"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "sub2_a"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2) -> Bool {
-    if self._sub2A != other._sub2A {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._sub2A)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._sub2A {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2, rhs: SwiftTestNestingGroupsMessage.SubGroup1.SubGroup2) -> Bool {
+    if lhs._sub2A != rhs._sub2A {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SwiftTestNestingGroupsMessage.SubGroup3: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestNestingGroupsMessage.SubGroup3: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = SwiftTestNestingGroupsMessage.protoMessageName + ".SubGroup3"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "sub3_a"),
     2: .unique(proto: "SubGroup4", json: "subgroup4"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestNestingGroupsMessage.SubGroup3) -> Bool {
-    if self._sub3A != other._sub3A {return false}
-    if self.subGroup4 != other.subGroup4 {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._sub3A)
+      case 2: try decoder.decodeRepeatedGroupField(value: &self.subGroup4)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._sub3A {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    if !self.subGroup4.isEmpty {
+      try visitor.visitRepeatedGroupField(value: self.subGroup4, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestNestingGroupsMessage.SubGroup3, rhs: SwiftTestNestingGroupsMessage.SubGroup3) -> Bool {
+    if lhs._sub3A != rhs._sub3A {return false}
+    if lhs.subGroup4 != rhs.subGroup4 {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SwiftTestNestingGroupsMessage.SubGroup3.SubGroup4: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SwiftTestNestingGroupsMessage.SubGroup3.SubGroup4: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = SwiftTestNestingGroupsMessage.SubGroup3.protoMessageName + ".SubGroup4"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "sub4_a"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: SwiftTestNestingGroupsMessage.SubGroup3.SubGroup4) -> Bool {
-    if self._sub4A != other._sub4A {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._sub4A)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._sub4A {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SwiftTestNestingGroupsMessage.SubGroup3.SubGroup4, rhs: SwiftTestNestingGroupsMessage.SubGroup3.SubGroup4) -> Bool {
+    if lhs._sub4A != rhs._sub4A {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }

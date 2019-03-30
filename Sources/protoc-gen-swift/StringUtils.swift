@@ -14,8 +14,7 @@ func splitPath(pathname: String) -> (dir:String, base:String, suffix:String) {
   var dir = ""
   var base = ""
   var suffix = ""
-
-  for c in pathname.characters {
+  for c in pathname {
     if c == "/" {
       dir += base + suffix + String(c)
       base = ""
@@ -27,7 +26,8 @@ func splitPath(pathname: String) -> (dir:String, base:String, suffix:String) {
       suffix += String(c)
     }
   }
-  if suffix.characters.first != "." {
+  let validSuffix = suffix.isEmpty || suffix.first == "."
+  if !validSuffix {
     base += suffix
     suffix = ""
   }
@@ -38,11 +38,12 @@ func partition(string: String, atFirstOccurrenceOf substring: String) -> (String
   guard let index = string.range(of: substring)?.lowerBound else {
     return (string, "")
   }
-  return (string.substring(to: index), string.substring(from: string.index(after: index)))
+  return (String(string[..<index]),
+          String(string[string.index(after: index)...]))
 }
 
 func parseParameter(string: String?) -> [(key:String, value:String)] {
-  guard let string = string, string.characters.count > 0 else {
+  guard let string = string, !string.isEmpty else {
     return []
   }
   let parts = string.components(separatedBy: ",")
@@ -62,7 +63,7 @@ func escapedToDataLiteral(_ s: String) -> String {
   if s.isEmpty {
     return "SwiftProtobuf.Internal.emptyData"
   }
-  var out = "Data(bytes: ["
+  var out = "Data(["
   var separator = ""
   var escape = false
   var octal = 0

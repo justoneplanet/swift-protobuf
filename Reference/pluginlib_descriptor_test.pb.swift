@@ -18,7 +18,7 @@
 //
 // -----------------------------------------------------------------------------
 ///
-/// Test proto for Tests/PluginLibraryTests/Test_Descriptor.swift
+/// Test proto for Tests/SwiftProtobufPluginLibraryTests/Test_Descriptor.swift
 ///
 // -----------------------------------------------------------------------------
 
@@ -64,8 +64,18 @@ enum SDTTopLevelEnum: SwiftProtobuf.Enum {
 
 }
 
-struct SDTTopLevelMessage: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".TopLevelMessage"
+#if swift(>=4.2)
+
+extension SDTTopLevelEnum: CaseIterable {
+  // Support synthesized by the compiler.
+}
+
+#endif  // swift(>=4.2)
+
+struct SDTTopLevelMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var field1: String {
     get {return _storage._field1 ?? String()}
@@ -74,7 +84,7 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
   /// Returns true if `field1` has been explicitly set.
   var hasField1: Bool {return _storage._field1 != nil}
   /// Clears the value of `field1`. Subsequent reads from it will return its default value.
-  mutating func clearField1() {_storage._field1 = nil}
+  mutating func clearField1() {_uniqueStorage()._field1 = nil}
 
   var field2: Int32 {
     get {return _storage._field2 ?? 0}
@@ -83,7 +93,7 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
   /// Returns true if `field2` has been explicitly set.
   var hasField2: Bool {return _storage._field2 != nil}
   /// Clears the value of `field2`. Subsequent reads from it will return its default value.
-  mutating func clearField2() {_storage._field2 = nil}
+  mutating func clearField2() {_uniqueStorage()._field2 = nil}
 
   var o: OneOf_O? {
     get {return _storage._o}
@@ -130,6 +140,7 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
     case field5(SDTTopLevelMessage.SubMessage)
     case field6(SDTTopLevelMessage2)
 
+  #if !swift(>=4.1)
     static func ==(lhs: SDTTopLevelMessage.OneOf_O, rhs: SDTTopLevelMessage.OneOf_O) -> Bool {
       switch (lhs, rhs) {
       case (.field3(let l), .field3(let r)): return l == r
@@ -139,6 +150,7 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
       default: return false
       }
     }
+  #endif
   }
 
   enum SubEnum: SwiftProtobuf.Enum {
@@ -170,8 +182,10 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
 
   }
 
-  struct SubMessage: SwiftProtobuf.Message {
-    static let protoMessageName: String = SDTTopLevelMessage.protoMessageName + ".SubMessage"
+  struct SubMessage {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
 
     var field1: Int32 {
       get {return _storage._field1 ?? 0}
@@ -180,7 +194,7 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
     /// Returns true if `field1` has been explicitly set.
     var hasField1: Bool {return _storage._field1 != nil}
     /// Clears the value of `field1`. Subsequent reads from it will return its default value.
-    mutating func clearField1() {_storage._field1 = nil}
+    mutating func clearField1() {_uniqueStorage()._field1 = nil}
 
     var field2: String {
       get {return _storage._field2 ?? String()}
@@ -189,7 +203,7 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
     /// Returns true if `field2` has been explicitly set.
     var hasField2: Bool {return _storage._field2 != nil}
     /// Clears the value of `field2`. Subsequent reads from it will return its default value.
-    mutating func clearField2() {_storage._field2 = nil}
+    mutating func clearField2() {_uniqueStorage()._field2 = nil}
 
     var field3: SDTTopLevelMessage.SubMessage {
       get {return _storage._field3 ?? SDTTopLevelMessage.SubMessage()}
@@ -198,129 +212,32 @@ struct SDTTopLevelMessage: SwiftProtobuf.Message {
     /// Returns true if `field3` has been explicitly set.
     var hasField3: Bool {return _storage._field3 != nil}
     /// Clears the value of `field3`. Subsequent reads from it will return its default value.
-    mutating func clearField3() {_storage._field3 = nil}
+    mutating func clearField3() {_uniqueStorage()._field3 = nil}
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
-
-    /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-    /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-    /// initializers are defined in the SwiftProtobuf library. See the Message and
-    /// Message+*Additions` files.
-    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-      _ = _uniqueStorage()
-      try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-        while let fieldNumber = try decoder.nextFieldNumber() {
-          switch fieldNumber {
-          case 1: try decoder.decodeSingularInt32Field(value: &_storage._field1)
-          case 2: try decoder.decodeSingularStringField(value: &_storage._field2)
-          case 3: try decoder.decodeSingularMessageField(value: &_storage._field3)
-          default: break
-          }
-        }
-      }
-    }
-
-    /// Used by the encoding methods of the SwiftProtobuf library, not generally
-    /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-    /// other serializer methods are defined in the SwiftProtobuf library. See the
-    /// `Message` and `Message+*Additions` files.
-    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-      try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-        if let v = _storage._field1 {
-          try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-        }
-        if let v = _storage._field2 {
-          try visitor.visitSingularStringField(value: v, fieldNumber: 2)
-        }
-        if let v = _storage._field3 {
-          try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-        }
-      }
-      try unknownFields.traverse(visitor: &visitor)
-    }
 
     fileprivate var _storage = _StorageClass.defaultInstance
   }
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularStringField(value: &_storage._field1)
-        case 2: try decoder.decodeSingularInt32Field(value: &_storage._field2)
-        case 3:
-          if _storage._o != nil {try decoder.handleConflictingOneOf()}
-          var v: SDTTopLevelEnum?
-          try decoder.decodeSingularEnumField(value: &v)
-          if let v = v {_storage._o = .field3(v)}
-        case 4:
-          if _storage._o != nil {try decoder.handleConflictingOneOf()}
-          var v: SDTTopLevelMessage.SubEnum?
-          try decoder.decodeSingularEnumField(value: &v)
-          if let v = v {_storage._o = .field4(v)}
-        case 5:
-          var v: SDTTopLevelMessage.SubMessage?
-          if let current = _storage._o {
-            try decoder.handleConflictingOneOf()
-            if case .field5(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._o = .field5(v)}
-        case 6:
-          var v: SDTTopLevelMessage2?
-          if let current = _storage._o {
-            try decoder.handleConflictingOneOf()
-            if case .field6(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {_storage._o = .field6(v)}
-        default: break
-        }
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._field1 {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 1)
-      }
-      if let v = _storage._field2 {
-        try visitor.visitSingularInt32Field(value: v, fieldNumber: 2)
-      }
-      switch _storage._o {
-      case .field3(let v)?:
-        try visitor.visitSingularEnumField(value: v, fieldNumber: 3)
-      case .field4(let v)?:
-        try visitor.visitSingularEnumField(value: v, fieldNumber: 4)
-      case .field5(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      case .field6(let v)?:
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      case nil: break
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-struct SDTTopLevelMessage2: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".TopLevelMessage2"
+#if swift(>=4.2)
+
+extension SDTTopLevelMessage.SubEnum: CaseIterable {
+  // Support synthesized by the compiler.
+}
+
+#endif  // swift(>=4.2)
+
+struct SDTTopLevelMessage2 {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var left: SDTTopLevelMessage {
     get {return _storage._left ?? SDTTopLevelMessage()}
@@ -329,7 +246,7 @@ struct SDTTopLevelMessage2: SwiftProtobuf.Message {
   /// Returns true if `left` has been explicitly set.
   var hasLeft: Bool {return _storage._left != nil}
   /// Clears the value of `left`. Subsequent reads from it will return its default value.
-  mutating func clearLeft() {_storage._left = nil}
+  mutating func clearLeft() {_uniqueStorage()._left = nil}
 
   var right: SDTTopLevelMessage2 {
     get {return _storage._right ?? SDTTopLevelMessage2()}
@@ -338,50 +255,19 @@ struct SDTTopLevelMessage2: SwiftProtobuf.Message {
   /// Returns true if `right` has been explicitly set.
   var hasRight: Bool {return _storage._right != nil}
   /// Clears the value of `right`. Subsequent reads from it will return its default value.
-  mutating func clearRight() {_storage._right = nil}
+  mutating func clearRight() {_uniqueStorage()._right = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularMessageField(value: &_storage._left)
-        case 2: try decoder.decodeSingularMessageField(value: &_storage._right)
-        default: break
-        }
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._left {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      }
-      if let v = _storage._right {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-struct SDTExternalRefs: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".ExternalRefs"
+struct SDTExternalRefs {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var desc: Google_Protobuf_DescriptorProto {
     get {return _storage._desc ?? Google_Protobuf_DescriptorProto()}
@@ -390,7 +276,7 @@ struct SDTExternalRefs: SwiftProtobuf.Message {
   /// Returns true if `desc` has been explicitly set.
   var hasDesc: Bool {return _storage._desc != nil}
   /// Clears the value of `desc`. Subsequent reads from it will return its default value.
-  mutating func clearDesc() {_storage._desc = nil}
+  mutating func clearDesc() {_uniqueStorage()._desc = nil}
 
   var ver: Google_Protobuf_Compiler_Version {
     get {return _storage._ver ?? Google_Protobuf_Compiler_Version()}
@@ -399,78 +285,23 @@ struct SDTExternalRefs: SwiftProtobuf.Message {
   /// Returns true if `ver` has been explicitly set.
   var hasVer: Bool {return _storage._ver != nil}
   /// Clears the value of `ver`. Subsequent reads from it will return its default value.
-  mutating func clearVer() {_storage._ver = nil}
+  mutating func clearVer() {_uniqueStorage()._ver = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  public var isInitialized: Bool {
-    return withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._desc, !v.isInitialized {return false}
-      return true
-    }
-  }
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularMessageField(value: &_storage._desc)
-        case 2: try decoder.decodeSingularMessageField(value: &_storage._ver)
-        default: break
-        }
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if let v = _storage._desc {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      }
-      if let v = _storage._ver {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
 
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-struct SDTScoperForExt: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".ScoperForExt"
+struct SDTScoperForExt {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
 }
 
 // MARK: - Extension support defined in pluginlib_descriptor_test.proto.
@@ -568,7 +399,8 @@ extension SDTTopLevelEnum: SwiftProtobuf._ProtoNameProviding {
   ]
 }
 
-extension SDTTopLevelMessage: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SDTTopLevelMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TopLevelMessage"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "field1"),
     2: .same(proto: "field2"),
@@ -601,19 +433,81 @@ extension SDTTopLevelMessage: SwiftProtobuf._MessageImplementationBase, SwiftPro
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: SDTTopLevelMessage) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularStringField(value: &_storage._field1)
+        case 2: try decoder.decodeSingularInt32Field(value: &_storage._field2)
+        case 3:
+          if _storage._o != nil {try decoder.handleConflictingOneOf()}
+          var v: SDTTopLevelEnum?
+          try decoder.decodeSingularEnumField(value: &v)
+          if let v = v {_storage._o = .field3(v)}
+        case 4:
+          if _storage._o != nil {try decoder.handleConflictingOneOf()}
+          var v: SDTTopLevelMessage.SubEnum?
+          try decoder.decodeSingularEnumField(value: &v)
+          if let v = v {_storage._o = .field4(v)}
+        case 5:
+          var v: SDTTopLevelMessage.SubMessage?
+          if let current = _storage._o {
+            try decoder.handleConflictingOneOf()
+            if case .field5(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._o = .field5(v)}
+        case 6:
+          var v: SDTTopLevelMessage2?
+          if let current = _storage._o {
+            try decoder.handleConflictingOneOf()
+            if case .field6(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {_storage._o = .field6(v)}
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._field1 {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+      }
+      if let v = _storage._field2 {
+        try visitor.visitSingularInt32Field(value: v, fieldNumber: 2)
+      }
+      switch _storage._o {
+      case .field3(let v)?:
+        try visitor.visitSingularEnumField(value: v, fieldNumber: 3)
+      case .field4(let v)?:
+        try visitor.visitSingularEnumField(value: v, fieldNumber: 4)
+      case .field5(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      case .field6(let v)?:
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      case nil: break
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SDTTopLevelMessage, rhs: SDTTopLevelMessage) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._field1 != other_storage._field1 {return false}
-        if _storage._field2 != other_storage._field2 {return false}
-        if _storage._o != other_storage._o {return false}
+        let rhs_storage = _args.1
+        if _storage._field1 != rhs_storage._field1 {return false}
+        if _storage._field2 != rhs_storage._field2 {return false}
+        if _storage._o != rhs_storage._o {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
@@ -626,7 +520,8 @@ extension SDTTopLevelMessage.SubEnum: SwiftProtobuf._ProtoNameProviding {
   ]
 }
 
-extension SDTTopLevelMessage.SubMessage: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SDTTopLevelMessage.SubMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = SDTTopLevelMessage.protoMessageName + ".SubMessage"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "field1"),
     2: .same(proto: "field2"),
@@ -656,24 +551,54 @@ extension SDTTopLevelMessage.SubMessage: SwiftProtobuf._MessageImplementationBas
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: SDTTopLevelMessage.SubMessage) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularInt32Field(value: &_storage._field1)
+        case 2: try decoder.decodeSingularStringField(value: &_storage._field2)
+        case 3: try decoder.decodeSingularMessageField(value: &_storage._field3)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._field1 {
+        try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+      }
+      if let v = _storage._field2 {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+      }
+      if let v = _storage._field3 {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SDTTopLevelMessage.SubMessage, rhs: SDTTopLevelMessage.SubMessage) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._field1 != other_storage._field1 {return false}
-        if _storage._field2 != other_storage._field2 {return false}
-        if _storage._field3 != other_storage._field3 {return false}
+        let rhs_storage = _args.1
+        if _storage._field1 != rhs_storage._field1 {return false}
+        if _storage._field2 != rhs_storage._field2 {return false}
+        if _storage._field3 != rhs_storage._field3 {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SDTTopLevelMessage2: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SDTTopLevelMessage2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TopLevelMessage2"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "left"),
     2: .same(proto: "right"),
@@ -700,23 +625,49 @@ extension SDTTopLevelMessage2: SwiftProtobuf._MessageImplementationBase, SwiftPr
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: SDTTopLevelMessage2) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularMessageField(value: &_storage._left)
+        case 2: try decoder.decodeSingularMessageField(value: &_storage._right)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._left {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      }
+      if let v = _storage._right {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SDTTopLevelMessage2, rhs: SDTTopLevelMessage2) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._left != other_storage._left {return false}
-        if _storage._right != other_storage._right {return false}
+        let rhs_storage = _args.1
+        if _storage._left != rhs_storage._left {return false}
+        if _storage._right != rhs_storage._right {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SDTExternalRefs: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SDTExternalRefs: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ExternalRefs"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "desc"),
     2: .same(proto: "ver"),
@@ -743,27 +694,69 @@ extension SDTExternalRefs: SwiftProtobuf._MessageImplementationBase, SwiftProtob
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: SDTExternalRefs) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  public var isInitialized: Bool {
+    return withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._desc, !v.isInitialized {return false}
+      return true
+    }
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularMessageField(value: &_storage._desc)
+        case 2: try decoder.decodeSingularMessageField(value: &_storage._ver)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if let v = _storage._desc {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      }
+      if let v = _storage._ver {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SDTExternalRefs, rhs: SDTExternalRefs) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._desc != other_storage._desc {return false}
-        if _storage._ver != other_storage._ver {return false}
+        let rhs_storage = _args.1
+        if _storage._desc != rhs_storage._desc {return false}
+        if _storage._ver != rhs_storage._ver {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension SDTScoperForExt: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension SDTScoperForExt: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ScoperForExt"
   static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
-  func _protobuf_generated_isEqualTo(other: SDTScoperForExt) -> Bool {
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: SDTScoperForExt, rhs: SDTScoperForExt) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }

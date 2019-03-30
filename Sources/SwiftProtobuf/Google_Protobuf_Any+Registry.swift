@@ -21,7 +21,8 @@ import Dispatch
 
 internal func buildTypeURL(forMessage message: Message, typePrefix: String) -> String {
   var url = typePrefix
-  if typePrefix.isEmpty || typePrefix.characters.last != "/" {
+  let needsSlash = typePrefix.isEmpty || typePrefix.last != "/"
+  if needsSlash {
     url += "/"
   }
   return url + typeName(fromMessage: message)
@@ -70,7 +71,7 @@ fileprivate var knownTypes: [String:Message.Type] = [
   "google.protobuf.Value": Google_Protobuf_Value.self,
 ]
 
-public extension Google_Protobuf_Any {
+extension Google_Protobuf_Any {
 
     /// Register a message type so that Any objects can use
     /// them for decoding contents.
@@ -99,7 +100,7 @@ public extension Google_Protobuf_Any {
     ///
     /// Returns: true if the type was registered, false if something
     ///   else was already registered for the messageName.
-    @discardableResult static public func register(messageType: Message.Type) -> Bool {
+    @discardableResult public static func register(messageType: Message.Type) -> Bool {
         let messageTypeName = messageType.protoMessageName
         var result: Bool = false
         serialQueue.sync {
@@ -117,13 +118,13 @@ public extension Google_Protobuf_Any {
     }
 
     /// Returns the Message.Type expected for the given type URL.
-    static public func messageType(forTypeURL url: String) -> Message.Type? {
+    public static func messageType(forTypeURL url: String) -> Message.Type? {
       let messageTypeName = typeName(fromURL: url)
       return messageType(forMessageName: messageTypeName)
     }
 
     /// Returns the Message.Type expected for the given proto message name.
-    static public func messageType(forMessageName name: String) -> Message.Type? {
+    public static func messageType(forMessageName name: String) -> Message.Type? {
         var result: Message.Type?
         serialQueue.sync {
             result = knownTypes[name]

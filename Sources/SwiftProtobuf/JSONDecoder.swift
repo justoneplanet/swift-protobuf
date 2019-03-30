@@ -27,7 +27,9 @@ internal struct JSONDecoder: Decoder {
 
   internal init(source: UnsafeBufferPointer<UInt8>, options: JSONDecodingOptions) {
     self.options = options
-    self.scanner = JSONScanner(source: source, messageDepthLimit: self.options.messageDepthLimit)
+    self.scanner = JSONScanner(source: source,
+                               messageDepthLimit: self.options.messageDepthLimit,
+                               ignoreUnknownFields: self.options.ignoreUnknownFields)
   }
 
   private init(decoder: JSONDecoder) {
@@ -127,7 +129,7 @@ internal struct JSONDecoder: Decoder {
     if n > Int64(Int32.max) || n < Int64(Int32.min) {
       throw JSONDecodingError.numberRange
     }
-    value = Int32(extendingOrTruncating: n)
+    value = Int32(truncatingIfNeeded: n)
   }
 
   mutating func decodeSingularInt32Field(value: inout Int32?) throws {
@@ -139,7 +141,7 @@ internal struct JSONDecoder: Decoder {
     if n > Int64(Int32.max) || n < Int64(Int32.min) {
       throw JSONDecodingError.numberRange
     }
-    value = Int32(extendingOrTruncating: n)
+    value = Int32(truncatingIfNeeded: n)
   }
 
   mutating func decodeRepeatedInt32Field(value: inout [Int32]) throws {
@@ -155,7 +157,7 @@ internal struct JSONDecoder: Decoder {
       if n > Int64(Int32.max) || n < Int64(Int32.min) {
         throw JSONDecodingError.numberRange
       }
-      value.append(Int32(extendingOrTruncating: n))
+      value.append(Int32(truncatingIfNeeded: n))
       if scanner.skipOptionalArrayEnd() {
         return
       }
@@ -206,7 +208,7 @@ internal struct JSONDecoder: Decoder {
     if n > UInt64(UInt32.max) {
       throw JSONDecodingError.numberRange
     }
-    value = UInt32(extendingOrTruncating: n)
+    value = UInt32(truncatingIfNeeded: n)
   }
 
   mutating func decodeSingularUInt32Field(value: inout UInt32?) throws {
@@ -218,7 +220,7 @@ internal struct JSONDecoder: Decoder {
     if n > UInt64(UInt32.max) {
       throw JSONDecodingError.numberRange
     }
-    value = UInt32(extendingOrTruncating: n)
+    value = UInt32(truncatingIfNeeded: n)
   }
 
   mutating func decodeRepeatedUInt32Field(value: inout [UInt32]) throws {
@@ -234,7 +236,7 @@ internal struct JSONDecoder: Decoder {
       if n > UInt64(UInt32.max) {
         throw JSONDecodingError.numberRange
       }
-      value.append(UInt32(extendingOrTruncating: n))
+      value.append(UInt32(truncatingIfNeeded: n))
       if scanner.skipOptionalArrayEnd() {
         return
       }

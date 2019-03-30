@@ -60,7 +60,7 @@ public struct Example: SwiftProtobuf.Message {
   //    $0.field1 = 7
   //    $0.field2 = ["foo", "bar"]
   // }
-  static public with(_ configurator: (inout Example) -> ());
+  public static with(_ configurator: (inout Example) -> ());
 
   // Messages can be serialized or deserialized to Data objects
   // using protobuf binary format.
@@ -79,9 +79,9 @@ public struct Example: SwiftProtobuf.Message {
   func jsonString() throws -> String
   init(jsonString: String) throws
 
-  // Messages can be serialized or deserialized to Protobuf text format:
-  func serializedText() -> String
-  init(serializedText: String) throws
+  // Messages can be serialized or deserialized to Protobuf TextFormat:
+  func textFormatString() -> String
+  init(textFormatString: String) throws
 
   // These are the generated methods used internally by the
   // serialization and deserialization mechanisms.
@@ -130,31 +130,16 @@ in your proto file:
 will generate a struct named `MyFooBar`.
 (Note: `swift_prefix` is only supported by protoc 3.2 or later.)
 
+:warning: The `swift_prefix` option has proven problematic in practice.
+Because it ignores the `package` directive, it can easily lead to name
+conflicts and other confusion as your shared proto definitions evolve over
+time.
+
 If the resulting name would collide with a Swift reserved word
 or would otherwise cause problems in the generated code,
 then the word `Message` is appended to the name.
 For example, a `message Int` in the proto file will cause the
 generator to emit a `struct IntMessage` to the generated Swift file.
-
-### Overridable Message methods
-
-You can redefine the following in manually-constructed extensions if you
-want to override the default generated behavior for any reason:
-
-```swift
-  // By default, this just calls `serializedText()`
-  public var debugDescription: String
-
-  // By default, this computes a simple hash over all of the
-  // defined fields and submessages.
-  public var hashValue: Int
-
-  // The == operator is implemented in terms of this method
-  // so that you can easily override the implementation.
-  // You may override this method, but you should never call it directly.
-  // The default generated implementation compares every field for equality.
-  public var isEqual(other: Example) -> Bool
-```
 
 ## Enum API
 
@@ -678,6 +663,24 @@ public protocol ExtensionMap {
     public func fieldNumberForProto(messageType: Message.Type, protoFieldName: String) -> Int?
 }
 ```
+
+## Descriptors
+
+Some other languages expose _Descriptor_ objects for messages, enums, fields,
+and oneof, but not all languages. The `.proto` language also allows developers
+to add options to messages, fields, etc. that can be looked up at runtime in
+those descriptors.
+
+Support for descriptors ends up requiring some amount of code, but more
+importantly it requires capturing a large binary blob of data for every
+message, enum, oneof, etc. That data has two potenial issues, it bloats the
+binaries, and it is something that can be extracted from the binary to help
+reverse engineer details about the binary.
+
+For these reasons, SwiftProtobuf does not current support anything like the
+Descriptor objects. It is something that could get revisited in the future,
+but will need careful consideration; the bloat/size issues is of the most
+concern because of Swift's common use for mobile applications.
 
 ## Aside:  proto2 vs. proto3
 

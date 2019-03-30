@@ -84,6 +84,14 @@ enum ProtobufUnittestImport_ImportEnum: SwiftProtobuf.Enum {
 
 }
 
+#if swift(>=4.2)
+
+extension ProtobufUnittestImport_ImportEnum: CaseIterable {
+  // Support synthesized by the compiler.
+}
+
+#endif  // swift(>=4.2)
+
 /// To use an enum in a map, it must has the first value as 0.
 enum ProtobufUnittestImport_ImportEnumForMap: SwiftProtobuf.Enum {
   typealias RawValue = Int
@@ -114,8 +122,18 @@ enum ProtobufUnittestImport_ImportEnumForMap: SwiftProtobuf.Enum {
 
 }
 
-struct ProtobufUnittestImport_ImportMessage: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".ImportMessage"
+#if swift(>=4.2)
+
+extension ProtobufUnittestImport_ImportEnumForMap: CaseIterable {
+  // Support synthesized by the compiler.
+}
+
+#endif  // swift(>=4.2)
+
+struct ProtobufUnittestImport_ImportMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var d: Int32 {
     get {return _d ?? 0}
@@ -129,30 +147,6 @@ struct ProtobufUnittestImport_ImportMessage: SwiftProtobuf.Message {
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      switch fieldNumber {
-      case 1: try decoder.decodeSingularInt32Field(value: &self._d)
-      default: break
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if let v = self._d {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
 
   fileprivate var _d: Int32? = nil
 }
@@ -177,14 +171,31 @@ extension ProtobufUnittestImport_ImportEnumForMap: SwiftProtobuf._ProtoNameProvi
   ]
 }
 
-extension ProtobufUnittestImport_ImportMessage: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittestImport_ImportMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ImportMessage"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "d"),
   ]
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittestImport_ImportMessage) -> Bool {
-    if self._d != other._d {return false}
-    if unknownFields != other.unknownFields {return false}
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      switch fieldNumber {
+      case 1: try decoder.decodeSingularInt32Field(value: &self._d)
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._d {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittestImport_ImportMessage, rhs: ProtobufUnittestImport_ImportMessage) -> Bool {
+    if lhs._d != rhs._d {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }

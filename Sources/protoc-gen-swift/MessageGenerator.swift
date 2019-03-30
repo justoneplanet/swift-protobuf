@@ -15,7 +15,7 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
-import PluginLibrary
+import SwiftProtobufPluginLibrary
 import SwiftProtobuf
 
 class MessageGenerator {
@@ -116,22 +116,20 @@ class MessageGenerator {
       }
     }
 
-    var conformance: [String] = ["SwiftProtobuf.Message"]
+    let conformances: String
     if isExtensible {
-      conformance.append("SwiftProtobuf.ExtensibleMessage")
+      conformances = ": SwiftProtobuf.ExtensibleMessage"
+    } else {
+      conformances = ""
     }
     p.print(
         "\n",
         descriptor.protoSourceComments(),
-        "\(visibility)struct \(swiftRelativeName): \(conformance.joined(separator: ", ")) {\n")
+        "\(visibility)struct \(swiftRelativeName)\(conformances) {\n")
     p.indent()
-    if let parent = parent {
-        p.print("\(visibility)static let protoMessageName: String = \(parent.swiftFullName).protoMessageName + \".\(descriptor.name)\"\n")
-    } else if !descriptor.file.package.isEmpty {
-        p.print("\(visibility)static let protoMessageName: String = _protobuf_package + \".\(descriptor.name)\"\n")
-    } else {
-        p.print("\(visibility)static let protoMessageName: String = \"\(descriptor.name)\"\n")
-    }
+    p.print("// SwiftProtobuf.Message conformance is added in an extension below. See the\n",
+            "// `Message` and `Message+*Additions` files in the SwiftProtobuf library for\n",
+            "// methods supported on all messages.\n")
 
     for f in fields {
       f.generateInterface(printer: &p)
@@ -162,15 +160,6 @@ class MessageGenerator {
         "\n",
         "\(visibility)init() {}\n")
 
-    // isInitialized
-    generateIsInitialized(printer:&p)
-
-    p.print("\n")
-    generateDecodeMessage(printer: &p)
-
-    p.print("\n")
-    generateTraverse(printer: &p)
-
     // Optional extension support
     if isExtensible {
       p.print(
@@ -199,20 +188,40 @@ class MessageGenerator {
     p.print("}\n")
   }
 
+  func generateEnumCaseIterable(printer p: inout CodePrinter) {
+    for e in enums {
+      e.generateCaseIterable(printer: &p, includeGuards: false)
+    }
+  }
+
   func generateRuntimeSupport(printer p: inout CodePrinter, file: FileGenerator, parent: MessageGenerator?) {
     p.print(
         "\n",
-        "extension \(swiftFullName): SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {\n")
+        "extension \(swiftFullName): SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {\n")
     p.indent()
+
+    if let parent = parent {
+      p.print("\(visibility)static let protoMessageName: String = \(parent.swiftFullName).protoMessageName + \".\(descriptor.name)\"\n")
+    } else if !descriptor.file.package.isEmpty {
+      p.print("\(visibility)static let protoMessageName: String = _protobuf_package + \".\(descriptor.name)\"\n")
+    } else {
+      p.print("\(visibility)static let protoMessageName: String = \"\(descriptor.name)\"\n")
+    }
     generateProtoNameProviding(printer: &p)
     if let storage = storage {
       p.print("\n")
       storage.generateTypeDeclaration(printer: &p)
       p.print("\n")
-      storage.generateUniqueStroage(printer: &p)
+      storage.generateUniqueStorage(printer: &p)
     }
     p.print("\n")
-    generateMessageImplementationBase(printer: &p)
+    generateIsInitialized(printer:&p)
+    // generateIsInitialized provides a blank line after itself.
+    generateDecodeMessage(printer: &p)
+    p.print("\n")
+    generateTraverse(printer: &p)
+    p.print("\n")
+    generateMessageEquality(printer: &p)
     p.outdent()
     p.print("}\n")
 
@@ -244,11 +253,6 @@ class MessageGenerator {
   ///
   /// - Parameter p: The code printer.
   private func generateDecodeMessage(printer p: inout CodePrinter) {
-    p.print(
-      "/// Used by the decoding initializers in the SwiftProtobuf library, not generally\n",
-      "/// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding\n",
-      "/// initializers are defined in the SwiftProtobuf library. See the Message and\n",
-      "/// Message+*Additions` files.\n")
     p.print("\(visibility)mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {\n")
     p.indent()
     if storage != nil {
@@ -262,7 +266,7 @@ class MessageGenerator {
     if descriptor.useMessageSetWireFormat && isExtensible {
 
       // MessageSet hands off the decode to the decoder to do the custom logic into the extensions.
-      p.print("try decoder.decodeExtensionFieldsAsMessageSet(values: &_protobuf_extensionFieldValues, messageType: \(swiftRelativeName).self)\n")
+      p.print("try decoder.decodeExtensionFieldsAsMessageSet(values: &_protobuf_extensionFieldValues, messageType: \(swiftFullName).self)\n")
 
     } else {
 
@@ -283,7 +287,7 @@ class MessageGenerator {
           if isExtensible {
             p.print("case \(descriptor.swiftExtensionRangeExpressions):\n")
             p.indent()
-            p.print("try decoder.decodeExtensionField(values: &_protobuf_extensionFieldValues, messageType: \(swiftRelativeName).self, fieldNumber: fieldNumber)\n")
+            p.print("try decoder.decodeExtensionField(values: &_protobuf_extensionFieldValues, messageType: \(swiftFullName).self, fieldNumber: fieldNumber)\n")
             p.outdent()
           }
           p.print("default: break\n")
@@ -292,7 +296,7 @@ class MessageGenerator {
           // own but we still need to generate a decode statement for extensions.
           p.print("if \(descriptor.swiftExtensionRangeBooleanExpression(variable: "fieldNumber")) {\n")
           p.indent()
-          p.print("try decoder.decodeExtensionField(values: &_protobuf_extensionFieldValues, messageType: \(swiftRelativeName).self, fieldNumber: fieldNumber)\n")
+          p.print("try decoder.decodeExtensionField(values: &_protobuf_extensionFieldValues, messageType: \(swiftFullName).self, fieldNumber: fieldNumber)\n")
           p.outdent()
           p.print("}\n")
         }
@@ -312,11 +316,6 @@ class MessageGenerator {
   ///
   /// - Parameter p: The code printer.
   private func generateTraverse(printer p: inout CodePrinter) {
-    p.print(
-      "/// Used by the encoding methods of the SwiftProtobuf library, not generally\n",
-      "/// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and\n",
-      "/// other serializer methods are defined in the SwiftProtobuf library. See the\n",
-      "/// `Message` and `Message+*Additions` files.\n")
     p.print("\(visibility)func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {\n")
     p.indent()
     generateWithLifetimeExtension(printer: &p, throws: true) { p in
@@ -346,22 +345,23 @@ class MessageGenerator {
     p.print("}\n")
   }
 
-  private func generateMessageImplementationBase(printer p: inout CodePrinter) {
-    p.print("\(visibility)func _protobuf_generated_isEqualTo(other: \(swiftFullName)) -> Bool {\n")
+  private func generateMessageEquality(printer p: inout CodePrinter) {
+    p.print("\(visibility)static func ==(lhs: \(swiftFullName), rhs: \(swiftFullName)) -> Bool {\n")
     p.indent()
     var compareFields = true
     if let storage = storage {
-      p.print("if _storage !== other._storage {\n")
+      p.print("if lhs._storage !== rhs._storage {\n")
       p.indent()
       p.print("let storagesAreEqual: Bool = ")
       if storage.storageProvidesEqualTo {
-        p.print("_storage.isEqualTo(other: other._storage)\n")
+        p.print("lhs._storage.isEqualTo(other: rhs._storage)\n")
         compareFields = false
       }
     }
     if compareFields {
       generateWithLifetimeExtension(printer: &p,
-                                    alsoCapturing: "other") { p in
+                                    alsoCapturing: "rhs",
+                                    selfQualifier: "lhs") { p in
         for f in fields {
           f.generateFieldComparison(printer: &p)
         }
@@ -375,9 +375,9 @@ class MessageGenerator {
       p.outdent()
       p.print("}\n")
     }
-    p.print("if unknownFields != other.unknownFields {return false}\n")
+    p.print("if lhs.unknownFields != rhs.unknownFields {return false}\n")
     if isExtensible {
-      p.print("if _protobuf_extensionFieldValues != other._protobuf_extensionFieldValues {return false}\n")
+      p.print("if lhs._protobuf_extensionFieldValues != rhs._protobuf_extensionFieldValues {return false}\n")
     }
     p.print("return true\n")
     p.outdent()
@@ -418,7 +418,6 @@ class MessageGenerator {
     }
 
     p.print(
-        "\n",
         "public var isInitialized: Bool {\n")
     p.indent()
     if isExtensible {
@@ -433,7 +432,8 @@ class MessageGenerator {
       p.print("return true\n")
     }
     p.outdent()
-    p.print("}\n")
+    p.print("}\n",
+            "\n")
   }
 
   /// Executes the given closure, wrapping the code that it prints in a call
@@ -458,6 +458,7 @@ class MessageGenerator {
     throws canThrow: Bool = false,
     returns: Bool = false,
     alsoCapturing capturedVariable: String? = nil,
+    selfQualifier qualifier: String? = nil,
     body: (inout CodePrinter) -> Void
   ) {
     if storage != nil {
@@ -465,10 +466,17 @@ class MessageGenerator {
         "\(canThrow ? "try " : "")"
       p.print(prefixKeywords)
 
+      let selfQualifier: String
+      if let qualifier = qualifier {
+        selfQualifier = "\(qualifier)."
+      } else {
+        selfQualifier = ""
+      }
+
       if let capturedVariable = capturedVariable {
         // withExtendedLifetime can only pass a single argument,
         // so we have to build and deconstruct a tuple in this case:
-        let actualArgs = "(_storage, \(capturedVariable)._storage)"
+        let actualArgs = "(\(selfQualifier)_storage, \(capturedVariable)._storage)"
         let formalArgs = "(_args: (_StorageClass, _StorageClass))"
         p.print("withExtendedLifetime(\(actualArgs)) { \(formalArgs) in\n")
         p.indent()
@@ -476,7 +484,7 @@ class MessageGenerator {
         p.print("let \(capturedVariable)_storage = _args.1\n")
       } else {
         // Single argument can be passed directly:
-        p.print("withExtendedLifetime(_storage) { (_storage: _StorageClass) in\n")
+        p.print("withExtendedLifetime(\(selfQualifier)_storage) { (_storage: _StorageClass) in\n")
         p.indent()
       }
     }

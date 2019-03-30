@@ -15,7 +15,7 @@
 import Foundation
 
 /// Text format encoding and decoding methods for messages.
-public extension Message {
+extension Message {
   /// Returns a string containing the Protocol Buffer text format serialization
   /// of the message.
   ///
@@ -24,12 +24,31 @@ public extension Message {
   ///
   /// - Returns: A string containing the text format serialization of the
   ///   message.
-  /// - Throws: `TextFormatEncodingError` if encoding fails.
   public func textFormatString() -> String {
-    var visitor = TextFormatEncodingVisitor(message: self)
+    // This is implemented as a separate zero-argument function
+    // to preserve binary compatibility.
+    return textFormatString(options: TextFormatEncodingOptions())
+  }
+
+  /// Returns a string containing the Protocol Buffer text format serialization
+  /// of the message.
+  ///
+  /// Unlike binary encoding, presence of required fields is not enforced when
+  /// serializing to JSON.
+  ///
+  /// - Returns: A string containing the text format serialization of the message.
+  /// - Parameters:
+  ///   - options: The TextFormatEncodingOptions to use.
+  public func textFormatString(
+    options: TextFormatEncodingOptions
+  ) -> String {
+    var visitor = TextFormatEncodingVisitor(message: self, options: options)
     if let any = self as? Google_Protobuf_Any {
       any._storage.textTraverse(visitor: &visitor)
     } else {
+      // Although the general traversal/encoding infrastructure supports
+      // throwing errors (needed for JSON/Binary WKTs support, binary format
+      // missing required fields); TextEncoding never actually does throw.
       try! traverse(visitor: &visitor)
     }
     return visitor.result

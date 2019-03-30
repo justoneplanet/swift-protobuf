@@ -18,7 +18,7 @@
 
 private func ProtoToJSON(name: String) -> String? {
   var jsonPath = String()
-  var chars = name.characters.makeIterator()
+  var chars = name.makeIterator()
   while let c = chars.next() {
     switch c {
     case "_":
@@ -43,7 +43,7 @@ private func ProtoToJSON(name: String) -> String? {
 
 private func JSONToProto(name: String) -> String? {
   var path = String()
-  for c in name.characters {
+  for c in name {
     switch c {
     case "_":
       return nil
@@ -58,10 +58,12 @@ private func JSONToProto(name: String) -> String? {
 }
 
 private func parseJSONFieldNames(names: String) -> [String]? {
+  // An empty field mask is the empty string (no paths).
+  guard !names.isEmpty else { return [] }
   var fieldNameCount = 0
   var fieldName = String()
   var split = [String]()
-  for c: Character in names.characters {
+  for c in names {
     switch c {
     case ",":
       if fieldNameCount == 0 {
@@ -90,7 +92,7 @@ private func parseJSONFieldNames(names: String) -> [String]? {
   return split
 }
 
-public extension Google_Protobuf_FieldMask {
+extension Google_Protobuf_FieldMask {
   /// Creates a new `Google_Protobuf_FieldMask` from the given array of paths.
   ///
   /// The paths should match the names used in the .proto file, which may be
@@ -123,7 +125,11 @@ public extension Google_Protobuf_FieldMask {
   ///   defined using the JSON names for the fields.
   public init?(jsonPaths: String...) {
     // TODO: This should fail if any of the conversions from JSON fails
-    self.init(protoPaths: jsonPaths.flatMap(JSONToProto))
+    #if swift(>=4.1)
+      self.init(protoPaths: jsonPaths.compactMap(JSONToProto))
+    #else
+      self.init(protoPaths: jsonPaths.flatMap(JSONToProto))
+    #endif
   }
 
   // It would be nice if to have an initializer that accepted Swift property
@@ -141,7 +147,7 @@ extension Google_Protobuf_FieldMask: _CustomJSONCodable {
     }
   }
 
-  func encodedJSONString() throws -> String {
+  func encodedJSONString(options: JSONEncodingOptions) throws -> String {
     // Note:  Proto requires alphanumeric field names, so there
     // cannot be a ',' or '"' character to mess up this formatting.
     var jsonPaths = [String]()

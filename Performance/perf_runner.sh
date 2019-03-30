@@ -32,11 +32,19 @@ set -eu
 
 cd "$(dirname $0)"
 
+# The 'swift' command is in the same directory as 'swiftc',
+# 'swiftc' is sometimes found via the common SWIFT_EXEC var:
+if [ -n "${SWIFT_EXEC:-}" ]; then
+    SWIFT=`dirname ${SWIFT_EXEC}`/swift
+else
+    SWIFT="swift"
+fi
+
 # Directory containing this script
 readonly script_dir="."
 
-# Change this if your checkout of github.com/google/protobuf is in a different
-# location.
+# Change this if your checkout of github.com/protocolbuffers/protobuf is in a
+# different location.
 readonly GOOGLE_PROTOBUF_CHECKOUT=${GOOGLE_PROTOBUF_CHECKOUT:-"$script_dir/../../protobuf"}
 
 function usage() {
@@ -175,7 +183,7 @@ function build_swift_packages() {
     echo "Building runtime and plug-in with Swift Package Manager..."
 
     cd "$workdir" >/dev/null
-    swift build -c release >/dev/null
+    "${SWIFT}" build -c release >/dev/null
     cp .build/release/protoc-gen-swift \
         ".build/release/protoc-gen-swift${plugin_suffix}"
   )

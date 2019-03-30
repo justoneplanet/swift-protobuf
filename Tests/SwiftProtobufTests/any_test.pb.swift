@@ -49,8 +49,10 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-struct ProtobufUnittest_TestAny: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".TestAny"
+struct ProtobufUnittest_TestAny {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var int32Value: Int32 {
     get {return _storage._int32Value}
@@ -64,7 +66,7 @@ struct ProtobufUnittest_TestAny: SwiftProtobuf.Message {
   /// Returns true if `anyValue` has been explicitly set.
   var hasAnyValue: Bool {return _storage._anyValue != nil}
   /// Clears the value of `anyValue`. Subsequent reads from it will return its default value.
-  mutating func clearAnyValue() {_storage._anyValue = nil}
+  mutating func clearAnyValue() {_uniqueStorage()._anyValue = nil}
 
   var repeatedAnyValue: [SwiftProtobuf.Google_Protobuf_Any] {
     get {return _storage._repeatedAnyValue}
@@ -75,43 +77,6 @@ struct ProtobufUnittest_TestAny: SwiftProtobuf.Message {
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        switch fieldNumber {
-        case 1: try decoder.decodeSingularInt32Field(value: &_storage._int32Value)
-        case 2: try decoder.decodeSingularMessageField(value: &_storage._anyValue)
-        case 3: try decoder.decodeRepeatedMessageField(value: &_storage._repeatedAnyValue)
-        default: break
-        }
-      }
-    }
-  }
-
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if _storage._int32Value != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._int32Value, fieldNumber: 1)
-      }
-      if let v = _storage._anyValue {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      }
-      if !_storage._repeatedAnyValue.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._repeatedAnyValue, fieldNumber: 3)
-      }
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
@@ -119,7 +84,8 @@ struct ProtobufUnittest_TestAny: SwiftProtobuf.Message {
 
 fileprivate let _protobuf_package = "protobuf_unittest"
 
-extension ProtobufUnittest_TestAny: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+extension ProtobufUnittest_TestAny: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".TestAny"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "int32_value"),
     2: .standard(proto: "any_value"),
@@ -149,19 +115,48 @@ extension ProtobufUnittest_TestAny: SwiftProtobuf._MessageImplementationBase, Sw
     return _storage
   }
 
-  func _protobuf_generated_isEqualTo(other: ProtobufUnittest_TestAny) -> Bool {
-    if _storage !== other._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((_storage, other._storage)) { (_args: (_StorageClass, _StorageClass)) in
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        switch fieldNumber {
+        case 1: try decoder.decodeSingularInt32Field(value: &_storage._int32Value)
+        case 2: try decoder.decodeSingularMessageField(value: &_storage._anyValue)
+        case 3: try decoder.decodeRepeatedMessageField(value: &_storage._repeatedAnyValue)
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if _storage._int32Value != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._int32Value, fieldNumber: 1)
+      }
+      if let v = _storage._anyValue {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }
+      if !_storage._repeatedAnyValue.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._repeatedAnyValue, fieldNumber: 3)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: ProtobufUnittest_TestAny, rhs: ProtobufUnittest_TestAny) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
-        let other_storage = _args.1
-        if _storage._int32Value != other_storage._int32Value {return false}
-        if _storage._anyValue != other_storage._anyValue {return false}
-        if _storage._repeatedAnyValue != other_storage._repeatedAnyValue {return false}
+        let rhs_storage = _args.1
+        if _storage._int32Value != rhs_storage._int32Value {return false}
+        if _storage._anyValue != rhs_storage._anyValue {return false}
+        if _storage._repeatedAnyValue != rhs_storage._repeatedAnyValue {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if unknownFields != other.unknownFields {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }

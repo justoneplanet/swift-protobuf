@@ -2,16 +2,6 @@
 
 # Swift Protobuf
 
----
->
-> Status: We are converging on a 1.0 release.  The current 0.9.903 tag should
-> meet all of our goals for 1.0.  Please try it and let us know!
->
-> (Note: There is a very small chance of further API breakage, which is why
-> we're not yet calling this `1.0RC`.)
->
----
-
 **Welcome to Swift Protobuf!**
 
 [Apple's Swift programming language](https://swift.org/) is a perfect
@@ -100,7 +90,7 @@ your project as explained below.
 
 To use Swift with Protocol buffers, you'll need:
 
-* A Swift 3.0.1 or later compiler (Xcode 8.1 or later).  Support is included
+* A Swift 3.2 or later compiler (Xcode 9.0 or later).  Support is included
 for the Swift Package Manager; or using the included Xcode project. The Swift
 protobuf project is being developed and tested against the latest release
 version of Swift available from [Swift.org](https://swift.org)
@@ -111,7 +101,7 @@ The SwiftProtobuf tests need a version of protoc which supports the
 `swift_prefix` option (introduced in protoc 3.2.0).
 It may work with earlier versions of protoc.
 You can get recent versions from
-[Google's github repository](https://github.com/google/protobuf).
+[Google's github repository](https://github.com/protocolbuffers/protobuf).
 
 ## Building and Installing the Code Generator Plugin
 
@@ -137,13 +127,23 @@ build the protoc plugin:
 
 ```
 $ git checkout tags/[tag_name]
-$ swift build -c release -Xswiftc -static-stdlib
+$ swift build --static-swift-stdlib -c release
 ```
 
 This will create a binary called `protoc-gen-swift` in the `.build/release`
 directory.
 To install, just copy this one executable into a directory that is
 part of your `PATH` environment variable.
+
+### Alternatively install via Homebrew
+
+If you prefer using [Homebrew](https://brew.sh):
+
+```
+$ brew install swift-protobuf
+```
+
+This will install `protoc` compiler and Swift code generator plugin.
 
 ## Converting .proto files into Swift
 
@@ -177,12 +177,16 @@ After copying the `.pb.swift` files into your project, you will need to add the
 [SwiftProtobuf library](https://github.com/apple/swift-protobuf) to your
 project to support the generated code.
 If you are using the Swift Package Manager, add a dependency to your
-`Package.swift` file.  Adjust the `Version()` here to match the `[tag_name]`
-you used to build the plugin above:
+`Package.swift` file and import the `SwiftProtobuf` library into the desired
+targets.  Adjust the `"1.2.0"` here to match the `[tag_name]` you used to build
+the plugin above:
 
 ```swift
 dependencies: [
-        .Package(url: "https://github.com/apple/swift-protobuf.git", Version(0,9,903))
+    .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.2.0"),
+],
+targets: [
+    .target(name: "MyTarget", dependencies: ["SwiftProtobuf"]),
 ]
 ```
 
@@ -201,7 +205,7 @@ If you're using CocoaPods, add this to your `Podfile` adjusting the `:tag` to
 match the `[tag_name]` you used to build the plugin above:
 
 ```ruby
-pod 'SwiftProtobuf', '~> 0.9.903'
+pod 'SwiftProtobuf', '~> 1.0'
 ```
 
 And run `pod install`.
@@ -213,7 +217,7 @@ And run `pod install`.
 If you're using Carthage, add this to your `Cartfile` but adjust the tag to match the `[tag_name]` you used to build the plugin above:
 
 ```ruby
-github "apple/swift-protobuf" "0.9.903"
+github "apple/swift-protobuf" ~> 1.0
 ```
 
 Run `carthage update` and drag `SwiftProtobuf.framework` into your Xcode.project.

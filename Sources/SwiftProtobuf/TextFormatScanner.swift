@@ -54,8 +54,10 @@ private let asciiUpperE = UInt8(ascii: "E")
 private let asciiLowerF = UInt8(ascii: "f")
 private let asciiUpperF = UInt8(ascii: "F")
 private let asciiLowerI = UInt8(ascii: "i")
+private let asciiLowerL = UInt8(ascii: "l")
 private let asciiLowerN = UInt8(ascii: "n")
 private let asciiLowerR = UInt8(ascii: "r")
+private let asciiLowerS = UInt8(ascii: "s")
 private let asciiLowerT = UInt8(ascii: "t")
 private let asciiUpperT = UInt8(ascii: "T")
 private let asciiLowerU = UInt8(ascii: "u")
@@ -672,11 +674,11 @@ internal struct TextFormatScanner {
             c = p[0]
         }
         switch c {
-        case asciiZero: // '0' as first character only if followed by '.'
+        case asciiZero: // '0' as first character is not allowed followed by digit
             p += 1
-            guard p != end else {p = start; return nil}
+            guard p != end else {break}
             c = p[0]
-            if c != asciiPeriod {
+            if c >= asciiZero && c <= asciiNine {
                 p = start
                 return nil
             }
@@ -720,6 +722,20 @@ internal struct TextFormatScanner {
         return d
     }
 
+    // Skip specified characters if they all match
+    private mutating func skipOptionalCharacters(bytes: [UInt8]) {
+        let start = p
+        for b in bytes {
+            if p == end || p[0] != b {
+                p = start
+                return
+            }
+            p += 1
+        }
+    }
+
+    // Skip following keyword if it matches (case-insensitively)
+    // the given keyword (specified as a series of bytes).
     private mutating func skipOptionalKeyword(bytes: [UInt8]) -> Bool {
         let start = p
         for b in bytes {
@@ -784,10 +800,7 @@ internal struct TextFormatScanner {
 
     internal mutating func nextFloat() throws -> Float {
         if let d = tryParseFloatString() {
-            let n = Float(d)
-            if n.isFinite {
-                return n
-            }
+            return Float(d)
         }
         if skipOptionalNaN() {
             return Float.nan
@@ -817,20 +830,47 @@ internal struct TextFormatScanner {
             throw TextFormatDecodingError.malformedText
         }
         let c = p[0]
+        p += 1
+        let result: Bool
         switch c {
-        case asciiZero, asciiOne, asciiLowerF, asciiUpperF, asciiLowerT, asciiUpperT:
-            switch parseIdentifier() {
-            case "0", "f", "false", "False":
-                return false
-            case "1", "t", "true", "True":
-                return true
-            default:
-                break
+        case asciiZero:
+            result = false
+        case asciiOne:
+            result = true
+        case asciiLowerF, asciiUpperF:
+            if p != end {
+                let alse = [asciiLowerA, asciiLowerL, asciiLowerS, asciiLowerE]
+                skipOptionalCharacters(bytes: alse)
             }
+            result = false
+        case asciiLowerT, asciiUpperT:
+            if p != end {
+                let rue = [asciiLowerR, asciiLowerU, asciiLowerE]
+                skipOptionalCharacters(bytes: rue)
+            }
+            result = true
         default:
-            break
+            throw TextFormatDecodingError.malformedText
         }
-        throw TextFormatDecodingError.malformedText
+        if p == end {
+            return result
+        }
+        switch p[0] {
+        case asciiSpace,
+             asciiTab,
+             asciiNewLine,
+             asciiCarriageReturn,
+             asciiHash,
+             asciiComma,
+             asciiSemicolon,
+             asciiCloseSquareBracket,
+             asciiCloseCurlyBracket,
+             asciiCloseAngleBracket:
+            skipWhitespace()
+            return result
+        default:
+            throw TextFormatDecodingError.malformedText
+        }
     }
 
     internal mutating func nextOptionalEnumName() throws -> UnsafeBufferPointer<UInt8>? {

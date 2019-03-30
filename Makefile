@@ -118,6 +118,7 @@ TEST_PROTOS= \
 	Protos/unittest_swift_cycle.proto \
 	Protos/unittest_swift_enum.proto \
 	Protos/unittest_swift_enum_optional_default.proto \
+	Protos/unittest_swift_enum_proto3.proto \
 	Protos/unittest_swift_extension.proto \
 	Protos/unittest_swift_extension2.proto \
 	Protos/unittest_swift_extension3.proto \
@@ -156,7 +157,7 @@ LIBRARY_PROTOS= \
 PLUGIN_PROTOS= \
 	Protos/google/protobuf/compiler/plugin.proto \
 	Protos/google/protobuf/descriptor.proto \
-	Protos/PluginLibrary/swift_protobuf_module_mappings.proto
+	Protos/SwiftProtobufPluginLibrary/swift_protobuf_module_mappings.proto
 
 # Protos that are used by the conformance test runner.
 CONFORMANCE_PROTOS= \
@@ -371,7 +372,7 @@ regenerate: \
 	regenerate-plugin-protos \
 	regenerate-test-protos \
 	regenerate-conformance-protos \
-	Tests/PluginLibraryTests/DescriptorTestData.swift
+	Tests/SwiftProtobufPluginLibraryTests/DescriptorTestData.swift
 
 # Rebuild just the protos included in the runtime library
 regenerate-library-protos: build ${PROTOC_GEN_SWIFT}
@@ -386,7 +387,7 @@ regenerate-plugin-protos: build ${PROTOC_GEN_SWIFT}
 	${GENERATE_SRCS} \
 		--tfiws_opt=FileNaming=DropPath \
 		--tfiws_opt=Visibility=Public \
-		--tfiws_out=Sources/PluginLibrary \
+		--tfiws_out=Sources/SwiftProtobufPluginLibrary \
 		${PLUGIN_PROTOS}
 
 # Rebuild just the protos used by the runtime test suite
@@ -399,7 +400,7 @@ regenerate-test-protos: build ${PROTOC_GEN_SWIFT} Protos/generated_swift_names_e
 		--tfiws_out=Tests/SwiftProtobufTests \
 		${TEST_PROTOS}
 
-Tests/PluginLibraryTests/DescriptorTestData.swift: build ${PROTOC_GEN_SWIFT} ${SWIFT_DESCRIPTOR_TEST_PROTOS}
+Tests/SwiftProtobufPluginLibraryTests/DescriptorTestData.swift: build ${PROTOC_GEN_SWIFT} ${SWIFT_DESCRIPTOR_TEST_PROTOS}
 	@${PROTOC} \
 		--include_imports \
 		--descriptor_set_out=DescriptorTestData.bin \
@@ -461,7 +462,7 @@ Protos/generated_swift_names_fields.proto: Protos/mined_words.txt
 	@echo '// Protoc errors imply this file is being generated incorrectly' >> $@
 	@echo '// Swift compile errors are probably bugs in protoc-gen-swift' >> $@
 	@echo 'syntax = "proto3";' >> $@
-	@echo 'package protobuf_unittest;' >> $@
+	@echo 'package protobuf_unittest_generated;' >> $@
 	@echo 'message GeneratedSwiftReservedFields {' >> $@
 	@cat Protos/mined_words.txt | awk 'BEGIN{n = 1} {print "  int32 " $$1 " = " n ";"; n += 1 }' >> $@
 	@echo '}' >> $@
@@ -473,7 +474,7 @@ Protos/generated_swift_names_enum_cases.proto: Protos/mined_words.txt
 	@echo '// Protoc errors imply this file is being generated incorrectly' >> $@
 	@echo '// Swift compile errors are probably bugs in protoc-gen-swift' >> $@
 	@echo 'syntax = "proto3";' >> $@
-	@echo 'package protobuf_unittest;' >> $@
+	@echo 'package protobuf_unittest_generated;' >> $@
 	@echo 'enum GeneratedSwiftReservedEnum {' >> $@
 	@echo '  NONE = 0;' >> $@
 	@cat Protos/mined_words.txt | awk 'BEGIN{n = 1} {print "  " $$1 " = " n ";"; n += 1 }' >> $@
@@ -486,7 +487,7 @@ Protos/generated_swift_names_messages.proto: Protos/mined_words.txt
 	@echo '// Protoc errors imply this file is being generated incorrectly' >> $@
 	@echo '// Swift compile errors are probably bugs in protoc-gen-swift' >> $@
 	@echo 'syntax = "proto3";' >> $@
-	@echo 'package protobuf_unittest;' >> $@
+	@echo 'package protobuf_unittest_generated;' >> $@
 	@echo 'message GeneratedSwiftReservedMessages {' >> $@
 	@cat Protos/mined_words.txt | awk '{print "  message " $$1 " { int32 " $$1 " = 1; }"}' >> $@
 	@echo '}' >> $@
@@ -498,7 +499,7 @@ Protos/generated_swift_names_enums.proto: Protos/mined_words.txt
 	@echo '// Protoc errors imply this file is being generated incorrectly' >> $@
 	@echo '// Swift compile errors are probably bugs in protoc-gen-swift' >> $@
 	@echo 'syntax = "proto3";' >> $@
-	@echo 'package protobuf_unittest;' >> $@
+	@echo 'package protobuf_unittest_generated;' >> $@
 	@echo 'message GeneratedSwiftReservedEnums {' >> $@
 	@cat Protos/mined_words.txt | awk '{print "  enum " $$1 " { NONE_" $$1 " = 0; }"}' >> $@
 	@echo '}' >> $@
@@ -514,7 +515,7 @@ regenerate-conformance-protos: build ${PROTOC_GEN_SWIFT}
 check-for-protobuf-checkout:
 	@if [ ! -d "${GOOGLE_PROTOBUF_CHECKOUT}/src/google/protobuf" ]; then \
 	  echo "ERROR: ${GOOGLE_PROTOBUF_CHECKOUT} does not appear to be a checkout of"; \
-	  echo "ERROR:   github.com/google/protobuf. Please check it out or set"; \
+	  echo "ERROR:   github.com/protocolbuffers/protobuf. Please check it out or set"; \
 	  echo "ERROR:   GOOGLE_PROTOBUF_CHECKOUT to point to a checkout."; \
 	  exit 1; \
 	fi
@@ -528,8 +529,6 @@ update-proto-files: check-for-protobuf-checkout
 	@rm -rf Protos/google && mkdir -p Protos/google/protobuf/compiler
 	@cp -v "${GOOGLE_PROTOBUF_CHECKOUT}"/src/google/protobuf/*.proto Protos/google/protobuf/
 	@cp -v "${GOOGLE_PROTOBUF_CHECKOUT}"/src/google/protobuf/compiler/*.proto Protos/google/protobuf/compiler/
-	# This file doesn't generate in google/protobuf, appears to be stale/unused.
-	@rm Protos/google/protobuf/map_unittest_proto3.proto
 
 # Runs the conformance tests.
 test-conformance: build check-for-protobuf-checkout $(CONFORMANCE_HOST) Sources/Conformance/failure_list_swift.txt
@@ -569,28 +568,32 @@ test-xcode-release: test-xcode-iOS-release test-xcode-macOS-release test-xcode-t
 
 # 4s - 32bit, 6s - 64bit
 test-xcode-iOS-debug:
+	# 9+ seems to not like concurrent testing with the iPhone 4s simulator.
 	xcodebuild -project SwiftProtobuf.xcodeproj \
 		-scheme SwiftProtobuf_iOS \
 		-configuration Debug \
-		-destination "platform=iOS Simulator,name=iPhone 6s,OS=latest" \
+		-destination "platform=iOS Simulator,name=iPhone 8,OS=latest" \
 		-destination "platform=iOS Simulator,name=iPhone 4s,OS=9.0" \
+		-disable-concurrent-destination-testing \
 		test $(XCODEBUILD_EXTRAS)
 
 # 4s - 32bit, 6s - 64bit
 # Release defaults to not supporting testing, so add ENABLE_TESTABILITY=YES
 # to ensure the main library gets testing support.
 test-xcode-iOS-release:
+	# 9+ seems to not like concurrent testing with the iPhone 4s simulator.
 	xcodebuild -project SwiftProtobuf.xcodeproj \
 		-scheme SwiftProtobuf_iOS \
 		-configuration Release \
-		-destination "platform=iOS Simulator,name=iPhone 6s,OS=latest" \
+		-destination "platform=iOS Simulator,name=iPhone 8,OS=latest" \
 		-destination "platform=iOS Simulator,name=iPhone 4s,OS=9.0" \
+		-disable-concurrent-destination-testing \
 		test ENABLE_TESTABILITY=YES $(XCODEBUILD_EXTRAS)
 
 test-xcode-macOS-debug:
 	xcodebuild -project SwiftProtobuf.xcodeproj \
 		-scheme SwiftProtobuf_macOS \
-		-configuration debug \
+		-configuration Debug \
 		build test $(XCODEBUILD_EXTRAS)
 
 # Release defaults to not supporting testing, so add ENABLE_TESTABILITY=YES
@@ -605,7 +608,7 @@ test-xcode-tvOS-debug:
 	xcodebuild -project SwiftProtobuf.xcodeproj \
 		-scheme SwiftProtobuf_tvOS \
 		-configuration Debug \
-		-destination "platform=tvOS Simulator,name=Apple TV 1080p,OS=latest" \
+		-destination "platform=tvOS Simulator,name=Apple TV,OS=latest" \
 		build test $(XCODEBUILD_EXTRAS)
 
 # Release defaults to not supporting testing, so add ENABLE_TESTABILITY=YES
@@ -614,7 +617,7 @@ test-xcode-tvOS-release:
 	xcodebuild -project SwiftProtobuf.xcodeproj \
 		-scheme SwiftProtobuf_tvOS \
 		-configuration Release \
-		-destination "platform=tvOS Simulator,name=Apple TV 1080p,OS=latest" \
+		-destination "platform=tvOS Simulator,name=Apple TV,OS=latest" \
 		build test ENABLE_TESTABILITY=YES $(XCODEBUILD_EXTRAS)
 
 # watchOS doesn't support tests, just do a build.

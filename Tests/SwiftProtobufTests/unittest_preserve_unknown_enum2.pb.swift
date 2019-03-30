@@ -78,8 +78,18 @@ enum Proto2PreserveUnknownEnumUnittest_MyEnum: SwiftProtobuf.Enum {
 
 }
 
-struct Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf.Message {
-  static let protoMessageName: String = _protobuf_package + ".MyMessage"
+#if swift(>=4.2)
+
+extension Proto2PreserveUnknownEnumUnittest_MyEnum: CaseIterable {
+  // Support synthesized by the compiler.
+}
+
+#endif  // swift(>=4.2)
+
+struct Proto2PreserveUnknownEnumUnittest_MyMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   var e: Proto2PreserveUnknownEnumUnittest_MyEnum {
     get {return _e ?? .foo}
@@ -121,6 +131,7 @@ struct Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf.Message {
     case oneofE1(Proto2PreserveUnknownEnumUnittest_MyEnum)
     case oneofE2(Proto2PreserveUnknownEnumUnittest_MyEnum)
 
+  #if !swift(>=4.1)
     static func ==(lhs: Proto2PreserveUnknownEnumUnittest_MyMessage.OneOf_O, rhs: Proto2PreserveUnknownEnumUnittest_MyMessage.OneOf_O) -> Bool {
       switch (lhs, rhs) {
       case (.oneofE1(let l), .oneofE1(let r)): return l == r
@@ -128,14 +139,37 @@ struct Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf.Message {
       default: return false
       }
     }
+  #endif
   }
 
   init() {}
 
-  /// Used by the decoding initializers in the SwiftProtobuf library, not generally
-  /// used directly. `init(serializedData:)`, `init(jsonUTF8Data:)`, and other decoding
-  /// initializers are defined in the SwiftProtobuf library. See the Message and
-  /// Message+*Additions` files.
+  fileprivate var _e: Proto2PreserveUnknownEnumUnittest_MyEnum? = nil
+}
+
+// MARK: - Code below here is support for the SwiftProtobuf runtime.
+
+fileprivate let _protobuf_package = "proto2_preserve_unknown_enum_unittest"
+
+extension Proto2PreserveUnknownEnumUnittest_MyEnum: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "FOO"),
+    1: .same(proto: "BAR"),
+    2: .same(proto: "BAZ"),
+  ]
+}
+
+extension Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".MyMessage"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "e"),
+    2: .standard(proto: "repeated_e"),
+    3: .standard(proto: "repeated_packed_e"),
+    4: .standard(proto: "repeated_packed_unexpected_e"),
+    5: .standard(proto: "oneof_e_1"),
+    6: .standard(proto: "oneof_e_2"),
+  ]
+
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       switch fieldNumber {
@@ -158,10 +192,6 @@ struct Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf.Message {
     }
   }
 
-  /// Used by the encoding methods of the SwiftProtobuf library, not generally
-  /// used directly. `Message.serializedData()`, `Message.jsonUTF8Data()`, and
-  /// other serializer methods are defined in the SwiftProtobuf library. See the
-  /// `Message` and `Message+*Additions` files.
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if let v = self._e {
       try visitor.visitSingularEnumField(value: v, fieldNumber: 1)
@@ -185,38 +215,13 @@ struct Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf.Message {
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  fileprivate var _e: Proto2PreserveUnknownEnumUnittest_MyEnum? = nil
-}
-
-// MARK: - Code below here is support for the SwiftProtobuf runtime.
-
-fileprivate let _protobuf_package = "proto2_preserve_unknown_enum_unittest"
-
-extension Proto2PreserveUnknownEnumUnittest_MyEnum: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "FOO"),
-    1: .same(proto: "BAR"),
-    2: .same(proto: "BAZ"),
-  ]
-}
-
-extension Proto2PreserveUnknownEnumUnittest_MyMessage: SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "e"),
-    2: .standard(proto: "repeated_e"),
-    3: .standard(proto: "repeated_packed_e"),
-    4: .standard(proto: "repeated_packed_unexpected_e"),
-    5: .standard(proto: "oneof_e_1"),
-    6: .standard(proto: "oneof_e_2"),
-  ]
-
-  func _protobuf_generated_isEqualTo(other: Proto2PreserveUnknownEnumUnittest_MyMessage) -> Bool {
-    if self._e != other._e {return false}
-    if self.repeatedE != other.repeatedE {return false}
-    if self.repeatedPackedE != other.repeatedPackedE {return false}
-    if self.repeatedPackedUnexpectedE != other.repeatedPackedUnexpectedE {return false}
-    if self.o != other.o {return false}
-    if unknownFields != other.unknownFields {return false}
+  static func ==(lhs: Proto2PreserveUnknownEnumUnittest_MyMessage, rhs: Proto2PreserveUnknownEnumUnittest_MyMessage) -> Bool {
+    if lhs._e != rhs._e {return false}
+    if lhs.repeatedE != rhs.repeatedE {return false}
+    if lhs.repeatedPackedE != rhs.repeatedPackedE {return false}
+    if lhs.repeatedPackedUnexpectedE != rhs.repeatedPackedUnexpectedE {return false}
+    if lhs.o != rhs.o {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
