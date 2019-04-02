@@ -1255,7 +1255,7 @@ internal struct JSONScanner {
           return fieldNumber
         }
         if !ignoreUnknownFields {
-          let fieldName = utf8ToString(bytes: key.baseAddress!, count: key.count)!
+          let fieldName = utf8ToString(bytes: key.baseAddress!, count: key.count)
           throw JSONDecodingError.unknownField(fieldName)
         }
       } else {

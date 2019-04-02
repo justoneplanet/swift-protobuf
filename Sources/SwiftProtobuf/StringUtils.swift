@@ -61,7 +61,7 @@ internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String {
     case .valid(_):
       break
     case .error:
-      return nil
+      return String()
     case .emptyInput:
       break Loop
     }
