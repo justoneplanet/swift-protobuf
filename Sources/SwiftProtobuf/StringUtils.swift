@@ -69,5 +69,5 @@ internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String {
 
   // This initializer is fast but does not reject broken
   // UTF-8 (which is why we validate the UTF-8 above).
-  return String(decoding: codeUnits, as: sourceEncoding) ?? ""
+  return String(decoding: codeUnits, as: sourceEncoding)
  }
