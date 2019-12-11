@@ -245,7 +245,7 @@ internal struct TextFormatScanner {
         let buff = parseUTF8Identifier()
         let s = utf8ToString(bytes: buff.baseAddress!, count: buff.count)
         // Force-unwrap is OK:  we never have invalid UTF8 at this point.
-        return s!
+        return s
     }
 
     /// Parse the rest of an [extension_field_name] in the input, assuming the
@@ -443,7 +443,7 @@ internal struct TextFormatScanner {
                 let s = utf8ToString(bytes: start, count: p - start)
                 p += 1
                 skipWhitespace()
-                if let s = s, sawBackslash {
+                if sawBackslash {
                     return decodeString(s)
                 } else {
                     return s

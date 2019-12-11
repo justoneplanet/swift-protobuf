@@ -45,7 +45,7 @@ internal func utf8ToString(
 // On Linux, the Foundation initializer is much
 // slower than on macOS, so this is a much bigger
 // win there.
-internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String? {
+internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String {
   if count == 0 {
     return String()
   }
@@ -61,7 +61,7 @@ internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String? {
     case .valid(_):
       break
     case .error:
-      return nil
+      return String()
     case .emptyInput:
       break Loop
     }
@@ -69,5 +69,5 @@ internal func utf8ToString(bytes: UnsafePointer<UInt8>, count: Int) -> String? {
 
   // This initializer is fast but does not reject broken
   // UTF-8 (which is why we validate the UTF-8 above).
-  return String(decoding: codeUnits, as: sourceEncoding)
+  return String(decoding: codeUnits, as: sourceEncoding) ?? ""
  }

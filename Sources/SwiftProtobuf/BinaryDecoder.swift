@@ -749,12 +749,8 @@ internal struct BinaryDecoder: Decoder {
         }
         var n: Int = 0
         let p = try getFieldBodyBytes(count: &n)
-        if let s = utf8ToString(bytes: p, count: n) {
-            value = s
-            consumed = true
-        } else {
-            throw BinaryDecodingError.invalidUTF8
-        }
+        value = utf8ToString(bytes: p, count: n)
+        consumed = true
     }
 
     internal mutating func decodeSingularStringField(value: inout String?) throws {
@@ -763,12 +759,8 @@ internal struct BinaryDecoder: Decoder {
         }
         var n: Int = 0
         let p = try getFieldBodyBytes(count: &n)
-        if let s = utf8ToString(bytes: p, count: n) {
-            value = s
-            consumed = true
-        } else {
-            throw BinaryDecodingError.invalidUTF8
-        }
+        value = utf8ToString(bytes: p, count: n)
+        consumed = true
     }
 
     internal mutating func decodeRepeatedStringField(value: inout [String]) throws {
@@ -776,12 +768,8 @@ internal struct BinaryDecoder: Decoder {
         case WireFormat.lengthDelimited:
             var n: Int = 0
             let p = try getFieldBodyBytes(count: &n)
-            if let s = utf8ToString(bytes: p, count: n) {
-                value.append(s)
-                consumed = true
-            } else {
-                throw BinaryDecodingError.invalidUTF8
-            }
+            value.append(utf8ToString(bytes: p, count: n))
+            consumed = true
         default:
             return
         }
